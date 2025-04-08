@@ -20,7 +20,10 @@ from rest_framework import status
 from django.db.models import Count, Sum
 from .models import Equb, EqubMember, Payment, LotteryWinner, SupportTicket, EqubCategory, EqubSubCategory
 
-
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+from .models import LotteryWinner, Notification
+from django.utils import timezone
 
 # ---------------------- EqubType ----------------------
 
@@ -682,3 +685,22 @@ def admin_equb_report(request):
             "message": f"Failed to generate report: {str(e)}",
             "data": {}
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+
+
+
+@receiver(post_save, sender=LotteryWinner)
+def notify_winner(sender, instance, created, **kwargs):
+    if created:
+        winner = instance.winner
+        equb_name = instance.equb.name
+        message = f"🎉 Congratulations! You have won the lottery for the Equb: {equb_name}."
+        
+        Notification.objects.create(
+            user=winner,
+            notif_type="Winner",
+            message=message,
+            created_at=timezone.now()
+        )

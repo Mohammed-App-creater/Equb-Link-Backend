@@ -97,7 +97,7 @@ class Notification(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f'Notification for {self.user.full_name}'
+        return f'Notification for {self.user.name}'
 
 # SupportTicket Model with UUID as primary key
 class SupportTicket(models.Model):
