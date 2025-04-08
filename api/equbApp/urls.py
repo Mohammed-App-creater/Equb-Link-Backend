@@ -56,4 +56,8 @@ urlpatterns = [
     path('equb_members/<uuid:equb_id>/', equb_members, name='equb_members'),
     path('unjoin_equb/', unjoin_equb, name='unjoin_equb'),  # Add this line for unjoin functionality
 
+    # notify_winner
+    path('notify_winner/', notify_winner, name='notify_winner'),  
+
+
 ]
