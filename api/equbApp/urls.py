@@ -59,5 +59,10 @@ urlpatterns = [
     # notify_winner
     path('notify_winner/', notify_winner, name='notify_winner'),  
 
+    # admin_equb_report
+    path('admin_equb_report/', admin_equb_report, name='admin_equb_report'),  
+    path('equb_detailed_report/<uuid:equb_id>/', equb_detailed_report, name='equb_detailed_report'),  
+
+
 
 ]

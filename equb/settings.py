@@ -168,8 +168,8 @@ REST_FRAMEWORK = {
 }
 
 SPECTACULAR_SETTINGS = {
-    "TITLE": "TuQualify API",
-    "DESCRIPTION": "Tuqualify project api for LMS",
+    "TITLE": "Equb App API",
+    "DESCRIPTION": "Equb App project api",
     "VERSION": "1.0.0",
     "SERVE_INCLUDE_SCHEMA": False,
     # OTHER SETTINGS
