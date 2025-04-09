@@ -138,17 +138,6 @@ Content-Type: application/json
 
 
 ###
-PUT http://127.0.0.1:8000/topics/877b7fb8-f116-49ca-925c-0aba7fa97316/
-Authorization: Token d31c1b4046d9afba30ffa4bcb06f607a06d0d5a8
-Content-Type: application/json
-{
-  "title": "mengsitu Q",
-  "course": "c3ef554f-d679-4a07-9382-e1adbea5d395",
-  "status": false,
-  "createdAt": "2023-01-13 23:17:05",
-  "updatedAt": "2023-01-29 07:31:32"
-}
-###
 DELETE http://127.0.0.1:8000/topics/74065b38-f640-41f3-8e17-2bada60e251c/
 Authorization: Token d31c1b4046d9afba30ffa4bcb06f607a06d0d5a8
 Content-Type: application/json
