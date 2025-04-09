@@ -53,16 +53,24 @@ urlpatterns = [
     path("subcategories_with_equbs_by_category/<uuid:category_id>/", subcategories_with_equbs_by_category, name="subcategories_with_equbs_by_category-user-joined"),
 
     path('join_equb/', join_equb, name='join_equb'),
-    path('equb_members/<uuid:equb_id>/', equb_members, name='equb_members'),
+    path('all_equb_members/<uuid:equb_id>/', equb_members, name='equb_members'),
     path('unjoin_equb/', unjoin_equb, name='unjoin_equb'),  # Add this line for unjoin functionality
 
     # notify_winner
     path('notify_winner/', notify_winner, name='notify_winner'),  
 
+    # preview_equb_winner
+    path('preview_equb_winner/<uuid:equb_id>/', preview_equb_winner, name='preview_equb_winner'),
+    # confirm_and_save_winner
+    path('confirm_and_save_winner/', confirm_and_save_winner, name='confirm_and_save_winner'),
+
     # admin_equb_report
     path('admin_equb_report/', admin_equb_report, name='admin_equb_report'),  
     path('equb_detailed_report/<uuid:equb_id>/', equb_detailed_report, name='equb_detailed_report'),  
+    # "list_user_payment_history"
+    path('list_user_payment_history/', list_user_payment_history, name='list_user_payment_history'),
 
-
+    # user_equb_payment_summary
+    path('user_equb_payment_summary/<int:user_id>/', user_equb_payment_summary, name='user_equb_payment_summary'),
 
 ]

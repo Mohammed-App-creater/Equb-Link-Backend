@@ -88,7 +88,6 @@ class Admin(models.Model):
         return self.name
 
 
-
 class Customer(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=30)
@@ -104,7 +103,6 @@ class Customer(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     referral_code = models.CharField(max_length=8, null=True, blank=True)
     referred_by = models.CharField(max_length=8, null=True, blank=True)
-
     referral_point = models.FloatField(default=0)
 
 

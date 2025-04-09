@@ -64,9 +64,6 @@ class EqubPostSerializer(serializers.ModelSerializer):
     subcategory = serializers.PrimaryKeyRelatedField(
         read_only=False, queryset=EqubSubCategory.objects.all()
     )
-    equb_type = serializers.PrimaryKeyRelatedField(
-        read_only=False, queryset=EqubType.objects.all()
-    )
 
     class Meta:
         model = Equb
@@ -89,6 +86,17 @@ class EqubMemberSerializer(serializers.ModelSerializer):
         model = EqubMember
         fields = '__all__'
 
+class EqubMemberPostSerializer(serializers.ModelSerializer):
+    user = serializers.PrimaryKeyRelatedField(
+        read_only=False, queryset=User.objects.all()
+    )
+    equb = serializers.PrimaryKeyRelatedField(
+        read_only=False, queryset=Equb.objects.all()
+    )
+
+    class Meta:
+        model = EqubMember
+        fields = '__all__'
 
 class PaymentSerializer(serializers.ModelSerializer):
     equb_member = EqubMemberSerializer(read_only=True)

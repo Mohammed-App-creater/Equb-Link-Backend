@@ -12,7 +12,7 @@ from .serializers import (
     EqubSubCategorySerializer,
     EqubTypeSerializer,
     EqubMemberSerializer,
-    EqubSubCategoryPostSerializer,EqubPostSerializer,SubCategoryWithEqubsSerializer
+    EqubSubCategoryPostSerializer,EqubPostSerializer,SubCategoryWithEqubsSerializer,EqubMemberPostSerializer
 )
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
@@ -258,38 +258,60 @@ def list_subcategories_by_category(request, category_id):
         status=status.HTTP_200_OK
     )
 
+
+from django.db.models import Count, Sum, Q
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+from rest_framework import status
+from .models import EqubCategory, EqubSubCategory, Equb, Payment
+from .serializers import SubCategoryWithEqubsSerializer, EqubSerializer
+
 @api_view(['GET'])
 def subcategories_with_equbs_by_category(request, category_id):
     try:
-        # Fetch subcategories for the given category_id
-        subcategories = EqubSubCategory.objects.filter(category__id=category_id).prefetch_related('equbs')
+        subcategories = EqubSubCategory.objects.filter(category__id=category_id)
 
-        # Check if subcategories exist
         if not subcategories.exists():
             return Response({
                 "data": [],
                 "message": "No subcategories found for this category."
             }, status=status.HTTP_404_NOT_FOUND)
 
-        # Serialize the subcategories with their equbs
-        serializer = SubCategoryWithEqubsSerializer(subcategories, many=True)
+        subcategory_data = []
 
-        # Return success response
+        for subcat in subcategories:
+            # Annotate each equb under this subcategory with total members and completed payment total
+            equbs = Equb.objects.filter(subcategory=subcat).annotate(
+                total_members=Count('equbmember', distinct=True),
+                total_payout=Sum(
+                    'equbmember__payment__amount',
+                    filter=Q(equbmember__payment__status='completed'),
+                    default=0
+                )
+            )
+
+            subcat_serialized = SubCategoryWithEqubsSerializer(subcat)
+            equb_serialized = EqubSerializer(equbs, many=True)
+
+            subcategory_data.append({
+                "id": subcat.id,
+                "name": subcat.name,
+                "description": subcat.description,
+                "image": request.build_absolute_uri(subcat.image.url) if subcat.image else None,
+                "equbs": equb_serialized.data
+            })
+
         return Response({
-            "data": serializer.data,
+            "data": subcategory_data,
             "message": "Fetched successfully"
         }, status=status.HTTP_200_OK)
 
-    except EqubSubCategory.DoesNotExist:
-        return Response({
-            "data": [],
-            "message": "Category ID does not exist."
-        }, status=status.HTTP_404_NOT_FOUND)
     except Exception as e:
         return Response({
             "data": [],
             "message": f"An error occurred: {str(e)}"
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 @api_view(["GET"])
 def equbs_by_subcategory(request, subcategory_id):
@@ -323,16 +345,22 @@ def equbs_user_joined(request):
         status=status.HTTP_200_OK
     )
 
+
 @api_view(['POST'])
+@permission_classes([IsAuthenticated, IsCustomerUser])
 def join_equb(request):
     try:
         # Extract the user and equb ID from the request data
-        user_id = request.data.get('user_id')
-        equb_id = request.data.get('equb_id')
+        user_id = request.data.get('user')
+        equb_id = request.data.get('equb')
+
+        print(f"Received user_id: {user_id}, equb_id: {equb_id}")
         
         # Fetch the user and equb instances
         user = User.objects.get(id=user_id)
         equb = Equb.objects.get(id=equb_id)
+
+        print(f"Found user: {user}, equb: {equb}")
 
         # Check if the user is already a member of the Equb
         if EqubMember.objects.filter(user=user, equb=equb).exists():
@@ -344,29 +372,29 @@ def join_equb(request):
         new_member = EqubMember.objects.create(
             user=user,
             equb=equb,
-            status='active',  # default status is active
-            payment_status='pending'  # default payment status is pending
+            total_members=equb.total_number_of_members,
+            status='active',
+            payment_status='pending'
         )
 
+        # Update the rules_and_condit_status to True
+        equb.rules_and_condit_status = True
+        equb.save()
+
         # Serialize the newly created member and return
-        serializer = EqubMemberSerializer(new_member)
+        serializer = EqubMemberPostSerializer(new_member)
         return Response({
             "data": serializer.data,
-            "message": "User successfully joined the Equb."
+            "message": "User successfully joined the Equb. Rules and conditions confirmed."
         }, status=status.HTTP_201_CREATED)
 
     except User.DoesNotExist:
-        return Response({
-            "message": "User not found."
-        }, status=status.HTTP_404_NOT_FOUND)
+        return Response({"message": "User not found."}, status=status.HTTP_404_NOT_FOUND)
     except Equb.DoesNotExist:
-        return Response({
-            "message": "Equb not found."
-        }, status=status.HTTP_404_NOT_FOUND)
+        return Response({"message": "Equb not found."}, status=status.HTTP_404_NOT_FOUND)
     except Exception as e:
-        return Response({
-            "message": f"An error occurred: {str(e)}"
-        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response({"message": f"An error occurred: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 @api_view(['GET'])
 def equb_members(request, equb_id):
@@ -398,8 +426,8 @@ def equb_members(request, equb_id):
 def unjoin_equb(request):
     try:
         # Extract the user and equb ID from the request data
-        user_id = request.data.get('user_id')
-        equb_id = request.data.get('equb_id')
+        user_id = request.data.get('user')
+        equb_id = request.data.get('equb')
 
         # Fetch the user and equb instances
         user = User.objects.get(id=user_id)
@@ -456,7 +484,7 @@ import random
 # list winner when it spin 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated,IsCustomerUser])
+@permission_classes([IsAuthenticated, IsCustomerUser])
 def preview_equb_winner(request, equb_id):
     try:
         equb = Equb.objects.get(id=equb_id)
@@ -472,22 +500,22 @@ def preview_equb_winner(request, equb_id):
     selected_member = random.choice(list(eligible_members))
 
     return Response({
-        "message": f"{selected_member.user.full_name} is selected as potential winner.",
+        "message": f"{selected_member.user.name} is selected as potential winner.",
         "winner": {
             "user_id": str(selected_member.user.id),
-            "name": selected_member.user.full_name,
+            "name": selected_member.user.name,
             "equb_id": str(equb.id),
         }
     }, status=status.HTTP_200_OK)
-
 # save  winner after it spin 
 
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated,IsCustomerUser])
 def confirm_and_save_winner(request):
-    equb_id = request.data.get('equb_id')
-    user_id = request.data.get('user_id')
+    
+    user_id = request.data.get('user')
+    equb_id = request.data.get('equb')
 
     if not equb_id or not user_id:
         return Response({"error": "equb_id and user_id are required."}, status=status.HTTP_400_BAD_REQUEST)
@@ -509,7 +537,7 @@ def confirm_and_save_winner(request):
     )
 
     return Response({
-        "message": f"{user.full_name} has been saved as the winner.",
+        "message": f"{user.name} has been saved as the winner.",
         "draw_date": winner.draw_date
     }, status=status.HTTP_201_CREATED)
 
@@ -589,22 +617,27 @@ def list_user_payment_history(request, user_id):
 
 # admin report 
 
-
 @api_view(['GET'])
-@permission_classes([IsAuthenticated,IsAdminUser])
+@permission_classes([IsAuthenticated, IsAdminUser])
 def equb_detailed_report(request, equb_id):
     try:
+        # Fetch the Equb object
         equb = Equb.objects.get(id=equb_id)
+
+        # Fetch members associated with the Equb
         members = EqubMember.objects.filter(equb=equb)
         member_ids = members.values_list('id', flat=True)
 
+        # Fetch paid members
         paid_members = Payment.objects.filter(equb_member__in=member_ids, status='completed').values_list('equb_member', flat=True).distinct()
         unpaid_members = members.exclude(id__in=paid_members)
 
+        # Fetch winners
         winner_user_ids = LotteryWinner.objects.filter(equb=equb).values_list('winner_id', flat=True)
         winners = members.filter(user_id__in=winner_user_ids)
         unwinners = members.exclude(user_id__in=winner_user_ids)
 
+        # Prepare the report data
         data = {
             "equb_name": equb.name,
             "total_members": members.count(),
@@ -646,7 +679,6 @@ def equb_detailed_report(request, equb_id):
 
     except Exception as e:
         return Response({"message": f"Error: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
 
 
 

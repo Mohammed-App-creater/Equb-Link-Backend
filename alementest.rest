@@ -4,7 +4,7 @@ Content-Type: application/json
 
 {
     "name": "Cool Man",
-    "email": "e@gmail.com",
+    "email": "abe@gmail.com",
     "phone": "+251969489521",
     "password": "12345678",
     "re_password": "12345678",
@@ -25,8 +25,6 @@ Content-Type: application/json
     "role": "admin"
  }
 
-
-
 ###
 POST http://127.0.0.1:8000/login
 Content-Type: application/json
@@ -36,9 +34,20 @@ Content-Type: application/json
     "password": "12345678"
 }
 
+
+
+###
+POST http://127.0.0.1:8000/login
+Content-Type: application/json
+
+{
+    "email": "abe@gmail.com",
+    "password": "12345678"
+}
+
 ###
 POST http://127.0.0.1:8000/admin_equb_types/
-Authorization: Token 95d1cb73dd74bce8db24e82fcbfdeb36f09a8fd4
+Authorization: Token 5b3955a585617d369f2e058e76551704a8b08f0f
 Content-Type: application/json
 
 {
@@ -48,13 +57,13 @@ Content-Type: application/json
 
 ###
 GET http://127.0.0.1:8000/admin_equb_types/
-Authorization: Token 95d1cb73dd74bce8db24e82fcbfdeb36f09a8fd4
+Authorization: Token 5b3955a585617d369f2e058e76551704a8b08f0f
 Content-Type: application/json
 
 # Admin  or View, update,create and delete all course
 ###
 POST http://127.0.0.1:8000/admin_equb_categories/
-Authorization: Token 95d1cb73dd74bce8db24e82fcbfdeb36f09a8fd4
+Authorization: Token 5b3955a585617d369f2e058e76551704a8b08f0f
 Content-Type: application/json
 
 {
@@ -65,7 +74,7 @@ Content-Type: application/json
 
 ###
 GET http://127.0.0.1:8000/admin_equb_categories/
-Authorization: Token 95d1cb73dd74bce8db24e82fcbfdeb36f09a8fd4
+Authorization: Token 5b3955a585617d369f2e058e76551704a8b08f0f
 Content-Type: application/json
 ###
 GET http://127.0.0.1:8000/courses/c3ef554f-d679-4a07-9382-e1adbea5d395/
@@ -74,55 +83,56 @@ Content-Type: application/json
 
 ###
 POST http://127.0.0.1:8000/admin_equb_subcategories/
-Authorization: Token 95d1cb73dd74bce8db24e82fcbfdeb36f09a8fd4
+Authorization: Token 5b3955a585617d369f2e058e76551704a8b08f0f
 Content-Type: application/json
 
 {
-      "category": "2936a557-0a6b-4d8a-ad57-cfeca12e4a82",
+      "category": "95806bd9-92d4-4988-a781-8c95891fc1a1",
       "name": "Emergency Fund",
       "image": null,
       "description": "A subcategory for saving emergency funds.",
-      "default_equb_type": "82bb1960-930d-40e1-8258-cf14e6b09798"
+      "default_equb_type": "146c9ca2-9f62-4828-bba1-660f598a2755"
 }
 ###
 GET http://127.0.0.1:8000/admin_equb_subcategories/
-Authorization: Token 95d1cb73dd74bce8db24e82fcbfdeb36f09a8fd4
+Authorization: Token 5b3955a585617d369f2e058e76551704a8b08f0f
 Content-Type: application/json
 
 # Topic Admin or View, update,create and delete all
 
 ###
 POST http://127.0.0.1:8000/admin_equbs/
-Authorization: Token 2bdaf49aeee7b6d32bfebc2350ab82af4fa9e0a0
+Authorization: Token 5b3955a585617d369f2e058e76551704a8b08f0f
 Content-Type: application/json
 
 {
       "name": "Savings Group",
-      "owner": "06af5d62-f995-4ab4-af65-36cd0d7bc78d",
-      "subcategory": "9956d549-fe0a-4783-ae9d-c48187f63743",
-      "equb_type": "82bb1960-930d-40e1-8258-cf14e6b09798",
+      "owner": "38c0f653-2c77-4345-9313-c7343ccebe3e",
+      "subcategory": "e9f393ed-9805-4a46-a90a-6a9a016a3dd6",
       "start_date": "2024-01-01",
       "end_date": "2024-12-31",
       "lottery_draw_schedule": "Every last Saturday of the month",
       "rules_and_conditions": "Members contribute a fixed amount monthly.",
       "rules_and_condit_status": true,
       "payout_system": "first_come_first_serve",
+      "total_number_of_members": 10,
+      "payment_at_each_round": 1000,
       "created_at": "2024-04-01T10:00:00"
 }
 
 ###
 GET http://127.0.0.1:8000/admin_equbs/
-Authorization: Token 2bdaf49aeee7b6d32bfebc2350ab82af4fa9e0a0
+Authorization: Token 5b3955a585617d369f2e058e76551704a8b08f0f
 Content-Type: application/json
 ###
-GET http://127.0.0.1:8000/equbs_by_subcategory/9956d549-fe0a-4783-ae9d-c48187f63743/
+GET http://127.0.0.1:8000/equbs_by_subcategory/95806bd9-92d4-4988-a781-8c95891fc1a1/
 # Authorization: Token d31c1b4046d9afba30ffa4bcb06f607a06d0d5a8
 Content-Type: application/json
 
 # subcategories_with_equbs_by_category
 
 ###
-GET http://127.0.0.1:8000/subcategories_with_equbs_by_category/2936a557-0a6b-4d8a-ad57-cfeca12e4a82/
+GET http://127.0.0.1:8000/subcategories_with_equbs_by_category/95806bd9-92d4-4988-a781-8c95891fc1a1/
 # Authorization: Token d31c1b4046d9afba30ffa4bcb06f607a06d0d5a8
 Content-Type: application/json
 
@@ -174,413 +184,87 @@ Content-Type: application/json
 
 
 
-############### Quesions Admin or View, update,create and delete all########################
+# Customer 
 
+# 22e4d1a440894d751fe30ef5770478996cec3a7c
+
+# join_equb
 
 ###
-POST http://127.0.0.1:8000/question/
-Authorization: Token d31c1b4046d9afba30ffa4bcb06f607a06d0d5a8
+POST http://127.0.0.1:8000/join_equb/
+Authorization: Token 326323294ec879e27e35ed6d28387ff815eaff2f
 Content-Type: application/json
+
 
 {
-  "title":"maths",
-  "image":null,
-  "choice_a":"A",
-  "choice_b":"B",
-  "choice_c":"C",
-  "choice_d":"D",
-  "answer":"A",
-  "answer_desc":"he aj as",
-  "course": "204ffb4a-93f6-432d-af00-a57f56c7f438" ,
-  "created_at": "2023-01-13 23:17:05",
-  "updated_at": "2023-01-29 07:31:32"
-}
-###
-GET http://127.0.0.1:8000/question/
-Authorization: Token d31c1b4046d9afba30ffa4bcb06f607a06d0d5a8
-Content-Type: application/json
-###
-GET http://127.0.0.1:8000/question/1f0c1a1a-3ef7-4213-ad0a-0d299f141e37/
-Authorization: Token d31c1b4046d9afba30ffa4bcb06f607a06d0d5a8
-Content-Type: application/json
-
-###
-PUT http://127.0.0.1:8000/question/1f0c1a1a-3ef7-4213-ad0a-0d299f141e37/
-Authorization: Token d31c1b4046d9afba30ffa4bcb06f607a06d0d5a8
-content-Type: application/json
-
-{
-  "title":"c++",
-  "image":null,
-  "choice_a":"A",
-  "choice_b":"B",
-  "choice_c":"C",
-  "choice_d":"D",
-  "answer":"A",
-  "answer_desc":"he aj as",
-  "course": "d826c2da-0670-401a-887a-ccdcf6f03909" ,
-  "created_at": "2023-01-13 23:17:05",
-  "updated_at": "2023-01-29 07:31:32"
-}
-###
-DELETE http://127.0.0.1:8000/question/1f0c1a1a-3ef7-4213-ad0a-0d299f141e37/
-Authorization: Token d31c1b4046d9afba30ffa4bcb06f607a06d0d5a8
-Content-Type: application/json
-
-
-###
-GET http://127.0.0.1:8000/questionstd/
-Authorization: Token 07da5025e604303be1755b64ee445f4de180b2aa
-Content-Type: application/json
-
-############### TopicQuesions Admin or View, update,create and delete all########################
-
-
-###
-POST http://127.0.0.1:8000/topicquestion/
-Authorization: Token d31c1b4046d9afba30ffa4bcb06f607a06d0d5a8
-Content-Type: application/json
-
-{
-
-  "topic":"1abc8f7b-c4b9-4bc6-adb9-089e5a1d517b",
-  "question": "4aa6d1ae-55e6-4b78-b37c-4da3fc520283",
-  "created_at": "2023-01-13 23:17:05",
-  "updated_at": "2023-01-29 07:31:32"
-}
-###
-GET http://127.0.0.1:8000/topicquestion/
-Authorization: Token d31c1b4046d9afba30ffa4bcb06f607a06d0d5a8
-Content-Type: application/json
-###
-GET http://127.0.0.1:8000/topicquestion/d576c531-3b91-4946-92f5-5f28c31b767b/
-Authorization: Token d31c1b4046d9afba30ffa4bcb06f607a06d0d5a8
-Content-Type: application/json
-
-###
-PUT http://127.0.0.1:8000/topicquestion/d576c531-3b91-4946-92f5-5f28c31b767b/
-Authorization: Token d31c1b4046d9afba30ffa4bcb06f607a06d0d5a8
-content-Type: application/json
-
-{
-  "topic":"1abc8f7b-c4b9-4bc6-adb9-089e5a1d517b",
-  "question": "4aa6d1ae-55e6-4b78-b37c-4da3fc520283",
-  "created_at": "2023-01-13 23:17:05",
-  "updated_at": "2023-01-29 07:31:32"
-}
-###
-DELETE http://127.0.0.1:8000/topicquestion/d576c531-3b91-4946-92f5-5f28c31b767b/
-Authorization: Token d31c1b4046d9afba30ffa4bcb06f607a06d0d5a8
-Content-Type: application/json
-
-
-###
-GET http://127.0.0.1:8000/topicquestionstd/
-Authorization: Token 07da5025e604303be1755b64ee445f4de180b2aa
-Content-Type: application/json
-
-############### TopicAnswer Admin or View, update,create and delete all########################
-
-
-###
-POST http://127.0.0.1:8000/topicanswer/
-Authorization: Token d31c1b4046d9afba30ffa4bcb06f607a06d0d5a8
-Content-Type: application/json
-
-{
-
-  "topic":"1abc8f7b-c4b9-4bc6-adb9-089e5a1d517b",
-  "question":"31ab0352-265f-4e17-84f7-c876c88e9c03",
-  "student":"a4940ce3-d3df-43f4-bcad-b9a5f0d70fe5",
-  "answer":"A",
-  "created_at": "2023-01-13 23:17:05",
-  "updated_at": "2023-01-29 07:31:32"
-}
-###
-GET http://127.0.0.1:8000/topicanswer/
-Authorization: Token d31c1b4046d9afba30ffa4bcb06f607a06d0d5a8
-Content-Type: application/json
-###
-GET http://127.0.0.1:8000/topicanswer/8961a0ba-49de-48ed-b52c-f5a4d8821189/
-Authorization: Token d31c1b4046d9afba30ffa4bcb06f607a06d0d5a8
-Content-Type: application/json
-
-###
-PUT http://127.0.0.1:8000/topicanswer/ab632ae4-fd05-4089-92e9-7dab88640314/
-Authorization: Token d31c1b4046d9afba30ffa4bcb06f607a06d0d5a8
-content-Type: application/json
-
-{
-
-  "topic":"1abc8f7b-c4b9-4bc6-adb9-089e5a1d517b",
-  "question":"31ab0352-265f-4e17-84f7-c876c88e9c03",
-  "student":"a4940ce3-d3df-43f4-bcad-b9a5f0d70fe5",
-  "answer":"B",
-  "created_at": "2023-01-13 23:17:05",
-  "updated_at": "2023-01-29 07:31:32"
-}
-###
-DELETE http://127.0.0.1:8000/topicanswer/d576c531-3b91-4946-92f5-5f28c31b767b/
-Authorization: Token d31c1b4046d9afba30ffa4bcb06f607a06d0d5a8
-Content-Type: application/json
-
-
-###
-GET http://127.0.0.1:8000/topicanswerstd/
-Authorization: Token 07da5025e604303be1755b64ee445f4de180b2aa
-Content-Type: application/json
-
-############### Challege Admin or View, update,create and delete all########################
-
-
-###
-POST http://127.0.0.1:8000/challenge/
-Authorization: Token d31c1b4046d9afba30ffa4bcb06f607a06d0d5a8
-Content-Type: application/json
-
-{
-
-  "name":"Abebe",
-  "department":"7b4014ab-7916-43ca-a2ab-65e90d36794a",
-  "status":true,
-  "start_date":"2023-01-13 23:17:05",
-  "end_date":"2023-01-13 23:17:05",
-  "created_at": "2023-01-13 23:17:05",
-  "updated_at": "2023-01-29 07:31:32"
-}
-###
-GET http://127.0.0.1:8000/challenge/
-Authorization: Token d31c1b4046d9afba30ffa4bcb06f607a06d0d5a8
-Content-Type: application/json
-###
-GET http://127.0.0.1:8000/challenge/ab632ae4-fd05-4089-92e9-7dab88640314/
-Authorization: Token d31c1b4046d9afba30ffa4bcb06f607a06d0d5a8
-Content-Type: application/json
-
-###
-PUT http://127.0.0.1:8000/challenge/ab632ae4-fd05-4089-92e9-7dab88640314/
-Authorization: Token d31c1b4046d9afba30ffa4bcb06f607a06d0d5a8
-content-Type: application/json
-
-{
-
-  "name":"mucha",
-  "department":"7b4014ab-7916-43ca-a2ab-65e90d36794a",
-  "status":true,
-  "start_date":"2023-01-13 23:17:05",
-  "end_date":"2023-01-13 23:17:05",
-  "created_at": "2023-01-13 23:17:05",
-  "updated_at": "2023-01-29 07:31:32"
-}
-###
-DELETE http://127.0.0.1:8000/challenge/ab632ae4-fd05-4089-92e9-7dab88640314/
-Authorization: Token d31c1b4046d9afba30ffa4bcb06f607a06d0d5a8
-Content-Type: application/json
-
-
-###
-GET http://127.0.0.1:8000/challengestd/
-Authorization: Token f02d162b1962025f138fe35a1059cf74e480c1c6
-Content-Type: application/json
-
-
-############## challengeQuestion Admin or View, update,create and delete all########################
-
-
-###
-POST http://127.0.0.1:8000/challengeQuestion/
-Authorization: Token d31c1b4046d9afba30ffa4bcb06f607a06d0d5a8
-Content-Type: application/json
-
-{
-
-  "challenge":"dd89429e-5a35-4369-9581-45c49c7ee90a",
-  "question":"003a1467-2a0c-42e0-b595-adbe37f8455b",
-  "created_at": "2023-01-13 23:17:05",
-  "updated_at": "2023-01-29 07:31:32"
-}
-###
-GET http://127.0.0.1:8000/challengeQuestion/
-Authorization: Token d31c1b4046d9afba30ffa4bcb06f607a06d0d5a8
-Content-Type: application/json
-###
-GET http://127.0.0.1:8000/challengeQuestion/8961a0ba-49de-48ed-b52c-f5a4d8821189/
-Authorization: Token d31c1b4046d9afba30ffa4bcb06f607a06d0d5a8
-Content-Type: application/json
-
-###
-PUT http://127.0.0.1:8000/challengeQuestion/8961a0ba-49de-48ed-b52c-f5a4d8821189/
-Authorization: Token d31c1b4046d9afba30ffa4bcb06f607a06d0d5a8
-content-Type: application/json
-
-{
-
-  "challenge":"dd89429e-5a35-4369-9581-45c49c7ee90a",
-  "question":"003a1467-2a0c-42e0-b595-adbe37f8455b",
-  "created_at": "2023-01-13 23:17:05",
-  "updated_at": "2023-01-29 07:31:32"
-}
-###
-DELETE http://127.0.0.1:8000/challengeQuestion/8961a0ba-49de-48ed-b52c-f5a4d8821189/
-Authorization: Token d31c1b4046d9afba30ffa4bcb06f607a06d0d5a8
-Content-Type: application/json
-
-
-###
-GET http://127.0.0.1:8000/challengeQuestionstd/
-Authorization: Token f02d162b1962025f138fe35a1059cf74e480c1c6
-Content-Type: application/json
-
-############## challengeAnswer Admin or View, update,create and delete all########################
-
-
-###
-POST http://127.0.0.1:8000/challengeAnswer/
-Authorization: Token d31c1b4046d9afba30ffa4bcb06f607a06d0d5a8
-Content-Type: application/json
-
-{
-
-  "question":"b81a5dd9-f4df-4df3-919a-c439ad984b34",
-  "student":"0a02d1f2-7aa5-4e06-912e-7ab75e07e44d",
-  "answer":"A",
-  "created_at": "2023-01-13 23:17:05",
-  "updated_at": "2023-01-29 07:31:32"
-}
-###
-GET http://127.0.0.1:8000/challengeAnswer/
-Authorization: Token d31c1b4046d9afba30ffa4bcb06f607a06d0d5a8
-Content-Type: application/json
-###
-GET http://127.0.0.1:8000/challengeAnswer/5b1f346f-cde3-4522-9170-483be642c2a2/
-Authorization: Token d31c1b4046d9afba30ffa4bcb06f607a06d0d5a8
-Content-Type: application/json
-
-###
-PUT http://127.0.0.1:8000/challengeAnswer/5b1f346f-cde3-4522-9170-483be642c2a2/
-Authorization: Token d31c1b4046d9afba30ffa4bcb06f607a06d0d5a8
-content-Type: application/json
-
-{
-
-  "question":"b81a5dd9-f4df-4df3-919a-c439ad984b34",
-  "student":"0a02d1f2-7aa5-4e06-912e-7ab75e07e44d",
-  "answer":"A",
-  "created_at": "2023-01-13 23:17:05",
-  "updated_at": "2023-01-29 07:31:32"
-}
-###
-DELETE http://127.0.0.1:8000/challengeAnswer/5b1f346f-cde3-4522-9170-483be642c2a2/
-Authorization: Token d31c1b4046d9afba30ffa4bcb06f607a06d0d5a8
-Content-Type: application/json
-
-
-###
-GET http://127.0.0.1:8000/challengeAnswerstd/
-Authorization: Token f02d162b1962025f138fe35a1059cf74e480c1c6
-Content-Type: application/json
-
-############## Advert Admin or View, update,create and delete all########################
-
-
-###
-POST http://127.0.0.1:8000/advert/
-Authorization: Token d31c1b4046d9afba30ffa4bcb06f607a06d0d5a8
-Content-Type: application/json
-
-{
-
-"title":"Computer", 
-"images":null, 
-"wallet":123
-}
-###
-GET http://127.0.0.1:8000/advert/
-Authorization: Token d31c1b4046d9afba30ffa4bcb06f607a06d0d5a8
-Content-Type: application/json
-###
-GET http://127.0.0.1:8000/advert/5b1f346f-cde3-4522-9170-483be642c2a2/
-Authorization: Token d31c1b4046d9afba30ffa4bcb06f607a06d0d5a8
-Content-Type: application/json
-
-###
-PUT http://127.0.0.1:8000/advert/5b1f346f-cde3-4522-9170-483be642c2a2/
-Authorization: Token d31c1b4046d9afba30ffa4bcb06f607a06d0d5a8
-content-Type: application/json
-
-{
-
-  "question":"b81a5dd9-f4df-4df3-919a-c439ad984b34",
-  "student":"0a02d1f2-7aa5-4e06-912e-7ab75e07e44d",
-  "answer":"A",
-  "created_at": "2023-01-13 23:17:05",
-  "updated_at": "2023-01-29 07:31:32"
-}
-###
-DELETE http://127.0.0.1:8000/advert/5b1f346f-cde3-4522-9170-483be642c2a2/
-Authorization: Token d31c1b4046d9afba30ffa4bcb06f607a06d0d5a8
-Content-Type: application/json
-
-
-###
-POST http://127.0.0.1:8000/coursesFilter/?page=1
-# Authorization: Token 55328aef686c04718aa7744ce2d7218b0ce1e80e
-Content-Type: application/json
-
-{
-"sort": "1",
-"level": "all",
-"pattern": "",
-"stream": "all",
-"department": "all"
-}
-
-###
-POST http://127.0.0.1:8000/challenge-filter/?page=1
-Authorization: Token 9fb05b533b7471d5edee19ae03089fff5d09735b
-Content-Type: application/json
-
-{
-    "sort": "1",
-    "level": "university",
-    "pattern": "",
-    "stream": "all",
-    "department": "all",
-    "page": 1
-}
-
-###
-POST http://127.0.0.1:8000/challenge-filter-12th/?page=1
-Authorization: Token d5f4e212f77cd413b7c101f39a6fd7f3a72165e5
-Content-Type: application/json
-
-{
-    "sort": "1",
-    "level": "all",
-    "pattern": "",
-    "stream": "Natural",
-    "department": "all",
-    "challengeType": "all",
-    "year": "all"
-}
-
-###
-POST http://127.0.0.1:8000/challenge-filter-univeristy/?page=1
-Authorization: Token d5f4e212f77cd413b7c101f39a6fd7f3a72165e5
-Content-Type: application/json
-
-{
-    "sort": "1",
-    "level": "all",
-    "pattern": "",
-    "stream": "all",
-    "department": "all",
-    "challengeType": "all",
-    "year": "all"
+      "user": "1",
+      "equb": "9c2d3c32-2181-44a0-96c6-340389b5ac46",
+      "status": "active",
+      "joined_at": "2024-04-01T10:00:00",
+      "payment_status": "paid"
 }
 
 
+# unjoin_equb
+
 ###
-GET http://127.0.0.1:8000/studentReferal/
-Authorization: Token a1e9571985f6125742a9eeb37bbc5bf8e8e17c25
+POST http://127.0.0.1:8000/unjoin_equb/
+Authorization: Token 326323294ec879e27e35ed6d28387ff815eaff2f
+Content-Type: application/json
+
+
+{
+      "user": "1",
+      "equb": "9c2d3c32-2181-44a0-96c6-340389b5ac46"
+}
+
+# equb_members
+
+###
+GET http://127.0.0.1:8000/all_equb_members/9c2d3c32-2181-44a0-96c6-340389b5ac46/
+Authorization: Token 326323294ec879e27e35ed6d28387ff815eaff2f
+Content-Type: application/json
+
+
+# preview_equb_winner
+
+###
+GET http://127.0.0.1:8000/preview_equb_winner/9c2d3c32-2181-44a0-96c6-340389b5ac46/
+Authorization: Token 326323294ec879e27e35ed6d28387ff815eaff2f
+Content-Type: application/json
+
+
+# confirm_and_save_winner
+
+###
+POST http://127.0.0.1:8000/confirm_and_save_winner/
+Authorization: Token 326323294ec879e27e35ed6d28387ff815eaff2f
+Content-Type: application/json
+
+
+{
+      "user": "1",
+      "equb": "9c2d3c32-2181-44a0-96c6-340389b5ac46"
+}
+
+# "admin_equb_report"
+
+###
+GET http://127.0.0.1:8000/admin_equb_report/
+Authorization: Token 5b3955a585617d369f2e058e76551704a8b08f0f
+Content-Type: application/json
+
+# equb_detailed_report
+
+###
+GET http://127.0.0.1:8000/equb_detailed_report/9c2d3c32-2181-44a0-96c6-340389b5ac46/
+Authorization: Token 5b3955a585617d369f2e058e76551704a8b08f0f
+Content-Type: application/json
+
+
+# list_user_payment_history
+
+###
+GET http://127.0.0.1:8000/list_user_payment_history/1/
+Authorization: Token 326323294ec879e27e35ed6d28387ff815eaff2f
 Content-Type: application/json
