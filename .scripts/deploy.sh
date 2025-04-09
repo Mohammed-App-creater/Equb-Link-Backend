@@ -31,13 +31,6 @@ echo "✅ Deployment complete!"
 
 # # Deployment script for Django on VPS
 
-# echo "🔄 Deployment Started..."
-# echo "🔄 Pulling latest changes from Git..."
-# # cd /home/YOUR_USER/YOUR_PROJECT_NAME || exit
-# git pull origin main
-
-# echo "🐍 Activating virtual environment..."
-# source venv/bin/activate
 
 # echo "📦 Installing dependencies..."
 # pip install -r requirements.txt
