@@ -142,20 +142,7 @@ GET http://127.0.0.1:8000/content/c8f9d177-80e9-4139-8e01-b598bcd7f15c/
 Authorization: Token d31c1b4046d9afba30ffa4bcb06f607a06d0d5a8
 Content-Type: application/json
 
-###
-PUT http://127.0.0.1:8000/content/f875bd56-9cf2-490e-b000-c740ad3d77b6/
-Authorization: Token d31c1b4046d9afba30ffa4bcb06f607a06d0d5a8
-Content-Type: application/json
 
-{
-  "title": "ababaab",
-  "body":"nsjkasnjsan acajb",
-  "video":null,
-  "topic":"1abc8f7b-c4b9-4bc6-adb9-089e5a1d517b",
-  "status": true,
-  "created_at": "2023-01-13 23:17:05",
-  "updated_at": "2023-01-29 07:31:32"
-}
 ###
 DELETE http://127.0.0.1:8000/content/c8f9d177-80e9-4139-8e01-b598bcd7f15c/
 Authorization: Token d31c1b4046d9afba30ffa4bcb06f607a06d0d5a8
