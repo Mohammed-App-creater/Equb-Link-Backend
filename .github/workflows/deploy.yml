@@ -1,0 +1,30 @@
+name: Deploy to VPSS
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    name: Deploy to VPS
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: ⬇️ Checkout Code
+        uses: actions/checkout@v3
+
+      - name: 🔐 Setup SSH and Deploy
+        run: |
+          echo "📁 Creating SSH folder..."
+          mkdir -p ~/.ssh
+
+          echo "🔑 Saving private key..."
+          echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+
+          echo "📡 Adding VPS to known hosts..."
+          ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
+
+          echo "🚀 Running deployment script on VPS..."
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} "bash ${{ secrets.VPS_PROJECT_PATH }}/deploy.sh"
