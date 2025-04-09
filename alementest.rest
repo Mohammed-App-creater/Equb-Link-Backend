@@ -137,12 +137,6 @@ GET http://127.0.0.1:8000/subcategories_with_equbs_by_category/95806bd9-92d4-498
 Content-Type: application/json
 
 
-
-
-###
-GET http://127.0.0.1:8000/content/
-Authorization: Token d31c1b4046d9afba30ffa4bcb06f607a06d0d5a8
-Content-Type: application/json
 ###
 GET http://127.0.0.1:8000/content/c8f9d177-80e9-4139-8e01-b598bcd7f15c/
 Authorization: Token d31c1b4046d9afba30ffa4bcb06f607a06d0d5a8
