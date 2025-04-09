@@ -137,10 +137,6 @@ GET http://127.0.0.1:8000/subcategories_with_equbs_by_category/95806bd9-92d4-498
 Content-Type: application/json
 
 
-###
-DELETE http://127.0.0.1:8000/topics/74065b38-f640-41f3-8e17-2bada60e251c/
-Authorization: Token d31c1b4046d9afba30ffa4bcb06f607a06d0d5a8
-Content-Type: application/json
 
 
 ###
