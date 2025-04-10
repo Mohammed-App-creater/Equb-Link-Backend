@@ -139,8 +139,10 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 # STATIC_URL = 'static/'
-FORCE_SCRIPT_NAME = '/equb'
-STATIC_URL = '/equb/static/'
+# settings.py
+
+STATIC_URL = '/equb/static/'  # This matches the location used in Nginx
+STATIC_ROOT = os.path.join(BASE_DIR, 'static')  # Or another path where you want to collect static files
 
 
 # Default primary key field type
