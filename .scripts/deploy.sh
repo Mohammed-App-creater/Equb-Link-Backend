@@ -2,15 +2,21 @@
 
 echo "🚀 Starting deployment..."
 
-# Check if the repository exists in /root/equb
+# Check if the repository exists
 if [ ! -d "/root/equb" ]; then
   echo "📁 Repository not found, cloning it..."
   git clone https://github.com/mengistuabebe06/Equb_App_Backend /root/equb
-else
-  # Change to the repository directory
-  cd /root/equb || exit
-  echo "📥 Pulling latest code..."
-  git pull origin main
+fi
+
+cd /root/equb || exit
+
+echo "📥 Pulling latest code..."
+git pull origin main
+
+# Create venv if it doesn't exist
+if [ ! -d "venv" ]; then
+  echo "🐍 Creating virtual environment..."
+  python3 -m venv venv
 fi
 
 echo "🐍 Activating virtual environment..."
