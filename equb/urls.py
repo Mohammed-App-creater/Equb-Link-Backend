@@ -10,13 +10,13 @@ from drf_spectacular.views import (
 )
 urlpatterns = [
     path('admin/', admin.site.urls),
-        path("", include("advert.urls")),
+        path("equb/", include("advert.urls")),
     path(
-        "",
+        "equb/",
         include("user.urls"),
     ),
         path(
-        "",
+        "equb/",
         include("equbApp.urls"),
     ),
 
