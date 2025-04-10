@@ -22,10 +22,10 @@ urlpatterns = [
 
     
     # YOUR PATTERNS
-    path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
+    path("equb/api/schema/", SpectacularAPIView.as_view(), name="schema"),
     # Optional UI:
     path(
-        "api/schema/docs/",
+        "equb/api/schema/docs/",
         SpectacularSwaggerView.as_view(url_name="schema"),
         name="docs",
     ),
