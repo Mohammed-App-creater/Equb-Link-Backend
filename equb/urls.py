@@ -10,22 +10,22 @@ from drf_spectacular.views import (
 )
 urlpatterns = [
     path('admin/', admin.site.urls),
-        path("equb/", include("advert.urls")),
+        path("", include("advert.urls")),
     path(
-        "equb/",
+        "",
         include("user.urls"),
     ),
         path(
-        "equb/",
+        "",
         include("equbApp.urls"),
     ),
 
     
     # YOUR PATTERNS
-    path("equb/api/schema/", SpectacularAPIView.as_view(), name="schema"),
+    path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
     # Optional UI:
     path(
-        "equb/api/schema/docs/",
+        "api/schema/docs/",
         SpectacularSwaggerView.as_view(url_name="schema"),
         name="docs",
     ),
