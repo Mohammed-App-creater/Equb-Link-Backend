@@ -507,6 +507,8 @@ def preview_equb_winner(request, equb_id):
             "equb_id": str(equb.id),
         }
     }, status=status.HTTP_200_OK)
+
+
 # save  winner after it spin 
 
 

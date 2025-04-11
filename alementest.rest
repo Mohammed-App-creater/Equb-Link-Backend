@@ -1,10 +1,10 @@
 
-POST http://127.0.0.1:8000/signup
+POST http://49.13.235.107:3006/signup
 Content-Type: application/json
 
 {
-    "name": "Cool Man",
-    "email": "abe@gmail.com",
+    "name": "kiru Mamo",
+    "email": "kebede@gmail.com",
     "phone": "+251969489521",
     "password": "12345678",
     "re_password": "12345678",
@@ -13,7 +13,7 @@ Content-Type: application/json
  }
 
 ###
-POST http://127.0.0.1:8000/signup
+POST http://49.13.235.107:3006/signup
 Content-Type: application/json
 
 {
@@ -30,10 +30,9 @@ POST http://127.0.0.1:8000/login
 Content-Type: application/json
 
 {
-    "email": "admin@gmail.com",
+    "email": "kiru@gmail.com",
     "password": "12345678"
 }
-
 
 
 ###
@@ -51,7 +50,7 @@ Authorization: Token 5b3955a585617d369f2e058e76551704a8b08f0f
 Content-Type: application/json
 
 {
-  "name": "Daily"
+  "name": "MOnthly"
 }
 
 
@@ -76,6 +75,7 @@ Content-Type: application/json
 GET http://127.0.0.1:8000/admin_equb_categories/
 Authorization: Token 5b3955a585617d369f2e058e76551704a8b08f0f
 Content-Type: application/json
+
 ###
 GET http://127.0.0.1:8000/courses/c3ef554f-d679-4a07-9382-e1adbea5d395/
 Authorization: Token d31c1b4046d9afba30ffa4bcb06f607a06d0d5a8
@@ -209,6 +209,7 @@ Content-Type: application/json
 GET http://127.0.0.1:8000/admin_equb_report/
 Authorization: Token 5b3955a585617d369f2e058e76551704a8b08f0f
 Content-Type: application/json
+
 
 # equb_detailed_report
 
