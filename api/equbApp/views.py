@@ -400,6 +400,13 @@ def join_equb(request):
         return Response({"message": f"An error occurred: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+from rest_framework import status
+from .models import Equb, EqubMember
+from user.models import Customer
+from .serializers import EqubMemberDataSerializer
+
 @api_view(['GET'])
 def equb_members(request, equb_id):
     try:
@@ -409,16 +416,32 @@ def equb_members(request, equb_id):
         # Fetch all members of the Equb
         members = EqubMember.objects.filter(equb=equb)
 
-        # Serialize the member data
-        serializer = EqubMemberDataSerializer(members, many=True)
+        # Create a list to hold serialized data
+        response_data = []
+
+        for member in members:
+            # Fetch the corresponding Customer for each member
+            customer = Customer.objects.get(user=member.user)
+            
+            # Serialize the member data and include customer name
+            member_data = EqubMemberDataSerializer(member).data
+            member_data['customer_name'] = customer.name  # Add customer name to the response data
+            
+            # Append to the response data list
+            response_data.append(member_data)
+
         return Response({
-            "data": serializer.data,
+            "data": response_data,
             "message": "Fetched Equb members successfully."
         }, status=status.HTTP_200_OK)
 
     except Equb.DoesNotExist:
         return Response({
             "message": "Equb not found."
+        }, status=status.HTTP_404_NOT_FOUND)
+    except Customer.DoesNotExist:
+        return Response({
+            "message": "Customer not found for one of the members."
         }, status=status.HTTP_404_NOT_FOUND)
     except Exception as e:
         return Response({
