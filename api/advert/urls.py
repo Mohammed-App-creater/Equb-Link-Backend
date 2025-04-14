@@ -13,8 +13,8 @@ urlpatterns = [
     path("advert/<uuid:id>/", AdvertGetDeleteUpdateAdmin, name="advertbyid"),
     path("advert_public/", AdvertGetPublic, name="advert_public"),
 
-    path('admin/faqs/', faq_list_create_admin, name='faq-list-create-admin'),
-    path('admin/faqs/<int:id>/', faq_detail_admin, name='faq-detail-admin'),
+    path('admin_faqs/', faq_list_create_admin, name='faq-list-create-admin'),
+    path('admin_faqs/<int:id>/', faq_detail_admin, name='faq-detail-admin'),
 
     # faq_list_create_admin
 

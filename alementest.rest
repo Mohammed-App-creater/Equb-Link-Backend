@@ -237,3 +237,17 @@ Content-Type: application/json
 ###
 GET http://127.0.0.1:8000/users_equb_contributions/1/
 Content-Type: application/json
+
+
+###
+POST http://127.0.0.1:8000/admin_faqs/
+Authorization: Token 5b3955a585617d369f2e058e76551704a8b08f0f
+Content-Type: application/json
+
+{
+    "question": "What is Equb?",
+    "answer": "Equb is a traditional savings and loan system where members contribute a fixed amount of money regularly and take turns in receiving the collected sum.",
+    "is_active": true,
+    "created_at": "2025-04-14T10:00:00Z",
+    "updated_at": "2025-04-14T10:00:00Z"
+  }
