@@ -4,7 +4,7 @@ Content-Type: application/json
 
 {
     "name": "kiru Mamo",
-    "email": "kebede@gmail.com",
+    "email": "mamo@gmail.com",
     "phone": "+251969489521",
     "password": "12345678",
     "re_password": "12345678",
@@ -224,4 +224,16 @@ Content-Type: application/json
 ###
 GET http://127.0.0.1:8000/list_user_payment_history/1/
 Authorization: Token 326323294ec879e27e35ed6d28387ff815eaff2f
+Content-Type: application/json
+
+###
+GET http://127.0.0.1:8000/equbs_users_total_paid/9c2d3c32-2181-44a0-96c6-340389b5ac46/1/
+Content-Type: application/json
+
+
+
+# users_equb_contributions
+
+###
+GET http://127.0.0.1:8000/users_equb_contributions/1/
 Content-Type: application/json

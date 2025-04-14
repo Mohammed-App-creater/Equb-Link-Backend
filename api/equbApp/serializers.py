@@ -86,6 +86,26 @@ class EqubMemberSerializer(serializers.ModelSerializer):
         model = EqubMember
         fields = '__all__'
 
+# class EqubMemberDataSerializer(serializers.ModelSerializer):
+#     equb = serializers.UUIDField(source='equb.id', read_only=True)
+
+#     class Meta:
+#         model = EqubMember
+#         fields = ['equb']  # Only return the Equb ID
+
+class UserDetailSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = "__all__"  
+
+class EqubMemberDataSerializer(serializers.ModelSerializer):
+    user = UserDetailSerializer(read_only=True)
+    equb = serializers.UUIDField(source='equb.id', read_only=True)
+
+    class Meta:
+        model = EqubMember
+        fields = ['user', 'equb']
+
 class EqubMemberPostSerializer(serializers.ModelSerializer):
     user = serializers.PrimaryKeyRelatedField(
         read_only=False, queryset=User.objects.all()

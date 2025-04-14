@@ -12,7 +12,11 @@ from .serializers import (
     EqubSubCategorySerializer,
     EqubTypeSerializer,
     EqubMemberSerializer,
-    EqubSubCategoryPostSerializer,EqubPostSerializer,SubCategoryWithEqubsSerializer,EqubMemberPostSerializer
+    EqubSubCategoryPostSerializer,
+    EqubPostSerializer,
+    SubCategoryWithEqubsSerializer,
+    EqubMemberPostSerializer,
+    EqubMemberDataSerializer
 )
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
@@ -406,7 +410,7 @@ def equb_members(request, equb_id):
         members = EqubMember.objects.filter(equb=equb)
 
         # Serialize the member data
-        serializer = EqubMemberSerializer(members, many=True)
+        serializer = EqubMemberDataSerializer(members, many=True)
         return Response({
             "data": serializer.data,
             "message": "Fetched Equb members successfully."
@@ -738,3 +742,65 @@ def notify_winner(sender, instance, created, **kwargs):
             message=message,
             created_at=timezone.now()
         )
+
+
+
+
+@api_view(['GET'])
+def customer_total_payment_for_equb(request, equb_id, user_id):
+    try:
+        equb = Equb.objects.get(id=equb_id)
+    except Equb.DoesNotExist:
+        return Response({"detail": "Equb not found."}, status=status.HTTP_404_NOT_FOUND)
+
+    try:
+        user = User.objects.get(id=user_id)
+    except User.DoesNotExist:
+        return Response({"detail": "User not found."}, status=status.HTTP_404_NOT_FOUND)
+
+    try:
+        member = EqubMember.objects.get(equb=equb, user=user)
+    except EqubMember.DoesNotExist:
+        return Response({"detail": "User is not a member of the specified Equb."}, status=status.HTTP_404_NOT_FOUND)
+
+    total_paid = Payment.objects.filter(equb_member=member, status='completed').aggregate(
+        total=Sum('amount')
+    )['total'] or 0.00
+
+    return Response({
+        "equb_id": str(equb.id),
+        "equb_name": equb.name,
+        "user_id": str(user.id),
+        "email": user.email,
+        "total_paid": total_paid
+    })
+
+
+
+@api_view(['GET'])
+def customer_equb_contributions(request, user_id):
+    try:
+        user = User.objects.get(id=user_id)
+    except User.DoesNotExist:
+        return Response({"detail": "User not found."}, status=status.HTTP_404_NOT_FOUND)
+
+    contributions = []
+    equb_memberships = EqubMember.objects.filter(user=user)
+
+    for membership in equb_memberships:
+        total_paid = Payment.objects.filter(
+            equb_member=membership,
+            status='completed'
+        ).aggregate(total=Sum('amount'))['total'] or 0.00
+
+        contributions.append({
+            "equb_id": str(membership.equb.id),
+            "equb_name": membership.equb.name,
+            "total_paid": total_paid
+        })
+
+    return Response({
+        "user_id": str(user.id),
+        "email": user.email,
+        "equb_contributions": contributions
+    })

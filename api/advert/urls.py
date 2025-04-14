@@ -16,6 +16,8 @@ urlpatterns = [
     path('admin/faqs/', faq_list_create_admin, name='faq-list-create-admin'),
     path('admin/faqs/<int:id>/', faq_detail_admin, name='faq-detail-admin'),
 
+    # faq_list_create_admin
+
     path('faqs/', faq_list, name='faq-list'),
 
 ]

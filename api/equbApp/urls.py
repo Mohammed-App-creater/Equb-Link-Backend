@@ -73,4 +73,6 @@ urlpatterns = [
     # user_equb_payment_summary
     path('user_equb_payment_summary/<int:user_id>/', user_equb_payment_summary, name='user_equb_payment_summary'),
 
+    path('equbs_users_total_paid/<uuid:equb_id>/<int:user_id>/', customer_total_payment_for_equb),
+    path('users_equb_contributions/<int:user_id>/', customer_equb_contributions),
 ]
