@@ -79,4 +79,6 @@ urlpatterns = [
     path('admin_view_equbs_with_members/', admin_view_equbs_with_members, name='admin_view_equbs_with_members'),
     # upload_receipt
     path('upload_receipt/', upload_receipt, name='upload_receipt'),
+    # get_draw_countdown
+    path('get_draw_countdown/<uuid:equb_id>/', get_draw_countdown, name='get_draw_countdown'),
 ]

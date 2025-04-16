@@ -4,7 +4,7 @@ Content-Type: application/json
 
 {
     "name": "mengistu Mamo",
-    "email": "abebe@gmail.com",
+    "email": "y@gmail.com",
     "phone": "+251969489521",
     "password": "12345678",
     "re_password": "12345678",
@@ -30,7 +30,7 @@ POST http://127.0.0.1:8000/login
 Content-Type: application/json
 
 {
-    "email": "abebe@gmail.com",
+    "email": "ye@gmail.com",
     "password": "12345678"
 }
 
@@ -40,7 +40,7 @@ POST http://127.0.0.1:8000/login
 Content-Type: application/json
 
 {
-    "email": "men@gmail.com",
+    "email": "y@gmail.com",
     "password": "12345678"
 }
 
@@ -50,7 +50,7 @@ Authorization: Token 5b3955a585617d369f2e058e76551704a8b08f0f
 Content-Type: application/json
 
 {
-  "name": "MOnthly"
+  "name": "weekly"
 }
 
 
@@ -91,7 +91,7 @@ Content-Type: application/json
       "name": "Emergency Fund",
       "image": null,
       "description": "A subcategory for saving emergency funds.",
-      "default_equb_type": "146c9ca2-9f62-4828-bba1-660f598a2755"
+      "default_equb_type": "4483dfb0-94fe-46b7-ba36-c7766d21b9a9"
 }
 ###
 GET http://127.0.0.1:8000/admin_equb_subcategories/
@@ -108,10 +108,10 @@ Content-Type: application/json
 {
       "name": "Savings Group",
       "owner": "38c0f653-2c77-4345-9313-c7343ccebe3e",
-      "subcategory": "e9f393ed-9805-4a46-a90a-6a9a016a3dd6",
+      "subcategory": "0613f056-8991-48d2-b261-7820721d0ecc",
       "start_date": "2024-01-01",
-      "end_date": "2024-12-31",
-      "lottery_draw_schedule": "Every last Saturday of the month",
+      "end_date": "2025-12-31",
+      "lottery_draw_schedule": "2024-12-31",
       "rules_and_conditions": "Members contribute a fixed amount monthly.",
       "rules_and_condit_status": true,
       "payout_system": "first_come_first_serve",
@@ -124,6 +124,7 @@ Content-Type: application/json
 GET http://127.0.0.1:8000/admin_equbs/
 Authorization: Token 5b3955a585617d369f2e058e76551704a8b08f0f
 Content-Type: application/json
+
 ###
 GET http://127.0.0.1:8000/equbs_by_subcategory/95806bd9-92d4-4988-a781-8c95891fc1a1/
 # Authorization: Token d31c1b4046d9afba30ffa4bcb06f607a06d0d5a8
@@ -154,7 +155,7 @@ Content-Type: application/json
 
 {
       "user": "5",
-      "equb": "9c2d3c32-2181-44a0-96c6-340389b5ac46",
+      "equb": "3bd387b0-cf27-4aa5-ab01-74c0b079747b",
       "status": "active",
       "joined_at": "2024-04-01T10:00:00",
       "payment_status": "paid"
@@ -185,8 +186,8 @@ Content-Type: application/json
 # preview_equb_winner
 
 ###
-GET http://127.0.0.1:8000/preview_equb_winner/9c2d3c32-2181-44a0-96c6-340389b5ac46/
-Authorization: Token 326323294ec879e27e35ed6d28387ff815eaff2f
+GET http://127.0.0.1:8000/preview_equb_winner/3bd387b0-cf27-4aa5-ab01-74c0b079747b/
+Authorization: Token 65b84f13f6a49d9cd55b0c28a61a85fd198b9b90
 Content-Type: application/json
 
 
@@ -194,13 +195,13 @@ Content-Type: application/json
 
 ###
 POST http://127.0.0.1:8000/confirm_and_save_winner/
-Authorization: Token 326323294ec879e27e35ed6d28387ff815eaff2f
+Authorization: Token afb323d5515cf619ae4c1b01dbdc9401cc3aa3da
 Content-Type: application/json
 
 
 {
       "user": "5",
-      "equb": "9c2d3c32-2181-44a0-96c6-340389b5ac46"
+      "equb": "3bd387b0-cf27-4aa5-ab01-74c0b079747b"
 }
 
 # "admin_equb_report"

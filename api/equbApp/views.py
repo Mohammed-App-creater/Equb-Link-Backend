@@ -28,6 +28,9 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 from .models import LotteryWinner, Notification
 from django.utils import timezone
+from django.contrib.auth import get_user_model
+
+User = get_user_model()  # This will fetch the custom User model dynamically
 
 # ---------------------- EqubType ----------------------
 
@@ -550,16 +553,24 @@ def preview_equb_winner(request, equb_id):
 
 
 # save  winner after it spin 
+
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 from django.utils import timezone
+from datetime import timedelta
+from django.shortcuts import get_object_or_404
+from .models import Equb, LotteryWinner  # use your correct import path
 
-from .models import Equb, LotteryWinner
-from user.models import User, Customer  # your custom Account model is aliased as User
-from user.permissions import IsCustomerUser
 
+
+from rest_framework.response import Response
+from rest_framework import status
+from rest_framework.decorators import api_view, permission_classes
+from django.shortcuts import get_object_or_404
+from django.utils import timezone
+from datetime import timedelta
+from .models import Equb, LotteryWinner, EqubType
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated, IsCustomerUser])
@@ -570,35 +581,67 @@ def confirm_and_save_winner(request):
     if not equb_id or not user_id:
         return Response({"error": "equb_id and user_id are required."}, status=status.HTTP_400_BAD_REQUEST)
 
+    equb = get_object_or_404(Equb, id=equb_id)
+    user = get_object_or_404(User, id=user_id)
+
+    # Ensure customer profile exists for the user
     try:
-        equb = Equb.objects.get(id=equb_id)
-        user = User.objects.get(id=user_id)
-    except (Equb.DoesNotExist, User.DoesNotExist):
-        return Response({"error": "Invalid equb or user ID."}, status=status.HTTP_404_NOT_FOUND)
+        customer = Customer.objects.get(user=user)
+    except Customer.DoesNotExist:
+        return Response({"error": "Customer profile not found for this user."}, status=status.HTTP_404_NOT_FOUND)
 
     # Check if the user has already won
     already_won = LotteryWinner.objects.filter(equb=equb, winner=user).exists()
     if already_won:
         return Response({"message": "This user has already won before."}, status=status.HTTP_400_BAD_REQUEST)
 
-    # Save the winner
+    # Create a new lottery winner entry
     winner = LotteryWinner.objects.create(
         equb=equb,
         winner=user,
         draw_date=timezone.now()
     )
 
-    # Try to get the name from the Customer model
-    try:
-        customer = Customer.objects.get(user=user)
-        winner_name = customer.name
-    except Customer.DoesNotExist:
-        winner_name = user.email  # fallback to email if name not available
+    # Handle lottery_draw_schedule update logic based on EqubType
+    equb_type = equb.subcategory.default_equb_type  # Assuming the `EqubSubCategory` links to `EqubType`
+    
+    if equb_type:
+        if equb_type.name.lower() == 'daily':
+            next_draw_date = equb.lottery_draw_schedule + timedelta(days=1)
+        elif equb_type.name.lower() == 'weekly':
+            next_draw_date = equb.lottery_draw_schedule + timedelta(weeks=1)
+        elif equb_type.name.lower() == 'monthly':
+            next_draw_date = equb.lottery_draw_schedule + timedelta(weeks=4)  # Approximation of a month
+        elif equb_type.name.lower() == '2 months':
+            next_draw_date = equb.lottery_draw_schedule + timedelta(weeks=8)  # Approximation of 2 months
+        elif equb_type.name.lower() == '3 months':
+            next_draw_date = equb.lottery_draw_schedule + timedelta(weeks=12)  # Approximation of 3 months
+        elif equb_type.name.lower() == '6 months':
+            next_draw_date = equb.lottery_draw_schedule + timedelta(weeks=24)  # Approximation of 6 months
+        else:
+            next_draw_date = equb.lottery_draw_schedule  # No change if type is unknown
+
+        # Ensure the next draw is within the `end_date`
+        if next_draw_date <= equb.end_date:
+            equb.lottery_draw_schedule = next_draw_date
+            equb.save()
+            next_draw_info = str(next_draw_date)
+        else:
+            next_draw_info = "Completed - No more draws"
+
+    else:
+        next_draw_info = "EqubType not found"
 
     return Response({
-        "message": f"{winner_name} has been saved as the winner.",
-        "draw_date": winner.draw_date
+        "message": f"{customer.name} has been saved as the winner.",
+        "draw_date": winner.draw_date,
+        "next_draw_schedule": next_draw_info
     }, status=status.HTTP_201_CREATED)
+
+
+
+
+
 
 
 
@@ -892,3 +935,59 @@ def upload_receipt(request, equb_member_id):
     )
 
     return Response({"message": "Receipt uploaded successfully."}, status=status.HTTP_201_CREATED)
+
+
+from datetime import timedelta
+from django.utils import timezone
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.response import Response
+from rest_framework import status
+from .models import Equb
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated, IsCustomerUser])
+def get_draw_countdown(request, equb_id):
+    # Get the Equb object
+    equb = get_object_or_404(Equb, id=equb_id)
+
+    # Handle lottery_draw_schedule update logic based on EqubType
+    equb_type = equb.subcategory.default_equb_type  # Assuming the `EqubSubCategory` links to `EqubType`
+    
+    if equb_type:
+        if equb_type.name.lower() == 'daily':
+            next_draw_date = equb.lottery_draw_schedule + timedelta(days=1)
+        elif equb_type.name.lower() == 'weekly':
+            next_draw_date = equb.lottery_draw_schedule + timedelta(weeks=1)
+        elif equb_type.name.lower() == 'monthly':
+            next_draw_date = equb.lottery_draw_schedule + timedelta(weeks=4)  # Approximation of a month
+        elif equb_type.name.lower() == '2 months':
+            next_draw_date = equb.lottery_draw_schedule + timedelta(weeks=8)  # Approximation of 2 months
+        elif equb_type.name.lower() == '3 months':
+            next_draw_date = equb.lottery_draw_schedule + timedelta(weeks=12)  # Approximation of 3 months
+        elif equb_type.name.lower() == '6 months':
+            next_draw_date = equb.lottery_draw_schedule + timedelta(weeks=24)  # Approximation of 6 months
+        else:
+            next_draw_date = equb.lottery_draw_schedule  # No change if type is unknown
+
+        # Ensure the next draw is within the `end_date`
+        if next_draw_date <= equb.end_date:
+            # Calculate the countdown (time difference between now and the next draw)
+            time_difference = next_draw_date - timezone.now()
+            days_left = time_difference.days
+            hours_left = time_difference.seconds // 3600
+            minutes_left = (time_difference.seconds % 3600) // 60
+
+            countdown = f"{days_left} days, {hours_left} hours, {minutes_left} minutes"
+            next_draw_info = next_draw_date.strftime('%Y-%m-%d')  # Return as a date string
+        else:
+            next_draw_info = "Completed - No more draws"
+            countdown = None  # No countdown if there are no more draws
+
+    else:
+        next_draw_info = "EqubType not found"
+        countdown = None  # No countdown if EqubType is not found
+
+    return Response({
+        "next_draw_schedule": next_draw_info,
+        "countdown": countdown  # Return the countdown
+    }, status=status.HTTP_200_OK)

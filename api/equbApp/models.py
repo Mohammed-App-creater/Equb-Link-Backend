@@ -36,6 +36,7 @@ class EqubSubCategory(models.Model):
         return self.name
 
 # Equb Model with UUID as primary key
+
 class Equb(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=255)
@@ -43,7 +44,7 @@ class Equb(models.Model):
     subcategory = models.ForeignKey(EqubSubCategory, on_delete=models.CASCADE, related_name='equbs')
     start_date = models.DateField()
     end_date = models.DateField()
-    lottery_draw_schedule = models.TextField()
+    lottery_draw_schedule = models.DateField()
     rules_and_conditions = models.TextField()
     rules_and_condit_status = models.BooleanField(default=False)
     payout_system = models.CharField(
