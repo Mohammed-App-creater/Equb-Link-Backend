@@ -75,4 +75,8 @@ urlpatterns = [
 
     path('equbs_users_total_paid/<uuid:equb_id>/<int:user_id>/', customer_total_payment_for_equb),
     path('users_equb_contributions/<int:user_id>/', customer_equb_contributions),
+    # admin_view_equbs_with_members
+    path('admin_view_equbs_with_members/', admin_view_equbs_with_members, name='admin_view_equbs_with_members'),
+    # upload_receipt
+    path('upload_receipt/', upload_receipt, name='upload_receipt'),
 ]

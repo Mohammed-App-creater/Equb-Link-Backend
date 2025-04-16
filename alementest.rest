@@ -1,10 +1,10 @@
 
-POST http://49.13.235.107:3006/signup
+POST http://127.0.0.1:8000/signup
 Content-Type: application/json
 
 {
-    "name": "kiru Mamo",
-    "email": "mamo@gmail.com",
+    "name": "mengistu Mamo",
+    "email": "abebe@gmail.com",
     "phone": "+251969489521",
     "password": "12345678",
     "re_password": "12345678",
@@ -13,7 +13,7 @@ Content-Type: application/json
  }
 
 ###
-POST http://49.13.235.107:3006/signup
+POST http://127.0.0.1:8000/signup
 Content-Type: application/json
 
 {
@@ -30,7 +30,7 @@ POST http://127.0.0.1:8000/login
 Content-Type: application/json
 
 {
-    "email": "kiru@gmail.com",
+    "email": "abebe@gmail.com",
     "password": "12345678"
 }
 
@@ -40,7 +40,7 @@ POST http://127.0.0.1:8000/login
 Content-Type: application/json
 
 {
-    "email": "abe@gmail.com",
+    "email": "men@gmail.com",
     "password": "12345678"
 }
 
@@ -153,7 +153,7 @@ Content-Type: application/json
 
 
 {
-      "user": "1",
+      "user": "5",
       "equb": "9c2d3c32-2181-44a0-96c6-340389b5ac46",
       "status": "active",
       "joined_at": "2024-04-01T10:00:00",
@@ -199,7 +199,7 @@ Content-Type: application/json
 
 
 {
-      "user": "1",
+      "user": "5",
       "equb": "9c2d3c32-2181-44a0-96c6-340389b5ac46"
 }
 

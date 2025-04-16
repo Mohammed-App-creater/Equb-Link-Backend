@@ -72,7 +72,7 @@ User = Account
 
 class Admin(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    name = models.CharField(max_length=30)
+    full_name = models.CharField(max_length=30)
     phone = models.CharField(
         validators=[RegexValidator(
             regex=r"^\+?1?\d{9,15}$",

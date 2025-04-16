@@ -499,16 +499,16 @@ def list_equb_members(request, equb_id):
         "message": f"Members of Equb ID {equb_id} retrieved successfully"
     }, status=status.HTTP_200_OK)
 
-from rest_framework.decorators import api_view
+
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
-from django.utils import timezone
-from .models import Equb, EqubMember, LotteryWinner
-from user.models import User
-
 import random
 
-# list winner when it spin 
+from .models import Equb, EqubMember, LotteryWinner
+from user.models import Customer  # or the appropriate model for user info
+from user.permissions import IsCustomerUser  # assuming you have this defined
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated, IsCustomerUser])
@@ -518,31 +518,52 @@ def preview_equb_winner(request, equb_id):
     except Equb.DoesNotExist:
         return Response({"error": "Equb not found"}, status=status.HTTP_404_NOT_FOUND)
 
+    # Get IDs of already selected winners
     winners = LotteryWinner.objects.filter(equb=equb).values_list('winner_id', flat=True)
-    eligible_members = EqubMember.objects.filter(equb=equb, status='active').exclude(user_id__in=winners)
+
+    # Get eligible members who haven't won yet
+    eligible_members = EqubMember.objects.filter(
+        equb=equb,
+        status='active'
+    ).exclude(user_id__in=winners)
 
     if not eligible_members.exists():
         return Response({"message": "No eligible members left to win."}, status=status.HTTP_400_BAD_REQUEST)
 
+    # Randomly select one eligible member
     selected_member = random.choice(list(eligible_members))
+    try:
+        customer = Customer.objects.get(user=selected_member.user)
+        selected_name = customer.name
+    except Customer.DoesNotExist:
+        selected_name = selected_member.user.email  # fallback to email if name not found
 
     return Response({
-        "message": f"{selected_member.user.name} is selected as potential winner.",
+        "message": f"{selected_name} is selected as a potential winner.",
         "winner": {
             "user_id": str(selected_member.user.id),
-            "name": selected_member.user.name,
+            "name": selected_name,
             "equb_id": str(equb.id),
         }
     }, status=status.HTTP_200_OK)
 
 
+
 # save  winner after it spin 
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework import status
+from django.utils import timezone
+
+from .models import Equb, LotteryWinner
+from user.models import User, Customer  # your custom Account model is aliased as User
+from user.permissions import IsCustomerUser
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated,IsCustomerUser])
+@permission_classes([IsAuthenticated, IsCustomerUser])
 def confirm_and_save_winner(request):
-    
     user_id = request.data.get('user')
     equb_id = request.data.get('equb')
 
@@ -555,20 +576,30 @@ def confirm_and_save_winner(request):
     except (Equb.DoesNotExist, User.DoesNotExist):
         return Response({"error": "Invalid equb or user ID."}, status=status.HTTP_404_NOT_FOUND)
 
+    # Check if the user has already won
     already_won = LotteryWinner.objects.filter(equb=equb, winner=user).exists()
     if already_won:
         return Response({"message": "This user has already won before."}, status=status.HTTP_400_BAD_REQUEST)
 
+    # Save the winner
     winner = LotteryWinner.objects.create(
         equb=equb,
         winner=user,
         draw_date=timezone.now()
     )
 
+    # Try to get the name from the Customer model
+    try:
+        customer = Customer.objects.get(user=user)
+        winner_name = customer.name
+    except Customer.DoesNotExist:
+        winner_name = user.email  # fallback to email if name not available
+
     return Response({
-        "message": f"{user.name} has been saved as the winner.",
+        "message": f"{winner_name} has been saved as the winner.",
         "draw_date": winner.draw_date
     }, status=status.HTTP_201_CREATED)
+
 
 
 #     # Get all EqubMemberships for this user
@@ -827,3 +858,37 @@ def customer_equb_contributions(request, user_id):
         "email": user.email,
         "equb_contributions": contributions
     })
+
+
+
+@api_view(['GET'])
+@permission_classes([IsAdminUser])
+def admin_view_equbs_with_members(request):
+    equbs = Equb.objects.all()
+    serializer = EqubSerializer(equbs, many=True)
+    return Response(serializer.data)
+
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def upload_receipt(request, equb_member_id):
+    try:
+        equb_member = EqubMember.objects.get(id=equb_member_id, user=request.user)
+    except EqubMember.DoesNotExist:
+        return Response({"error": "Equb member not found."}, status=status.HTTP_404_NOT_FOUND)
+
+    receipt_image = request.FILES.get('recipt_image')
+    if not receipt_image:
+        return Response({"error": "Receipt image is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+    payment = Payment.objects.create(
+        equb_member=equb_member,
+        amount=request.data.get("amount"),
+        payment_method=request.data.get("payment_method", "manual"),
+        transaction_id=request.data.get("transaction_id"),
+        recipt_image=receipt_image,
+        status='pending'
+    )
+
+    return Response({"message": "Receipt uploaded successfully."}, status=status.HTTP_201_CREATED)

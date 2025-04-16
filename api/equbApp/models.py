@@ -81,10 +81,11 @@ class Payment(models.Model):
     payment_method = models.CharField(max_length=50)
     transaction_id = models.CharField(max_length=100)
     paid_at = models.DateTimeField(null=True, blank=True)
+    recipt_image = models.ImageField(upload_to='recipt_categories/', null=True, blank=True)
     status = models.CharField(max_length=50, choices=[('pending', 'Pending'), ('completed', 'Completed')], default='pending')
 
     def __str__(self):
-        return f'Payment {self.transaction_id} for {self.equb_member.user.full_name}'
+        return f'Payment {self.transaction_id} for {self.equb_member.user.name}'
 
 # LotteryWinner Model with UUID as primary key
 class LotteryWinner(models.Model):
