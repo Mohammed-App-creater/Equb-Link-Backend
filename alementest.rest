@@ -18,7 +18,7 @@ Content-Type: application/json
 
 {
     "name": "rock Man",
-    "email": "admin@gmail.com",
+    "email": "admin7@gmail.com",
     "phone": "+251969489521",
     "password": "12345678",
     "re_password": "12345678",
@@ -26,11 +26,11 @@ Content-Type: application/json
  }
 
 ###
-POST http://127.0.0.1:8000/login
+POST http://49.13.235.107:3006/login
 Content-Type: application/json
 
 {
-    "email": "ye@gmail.com",
+    "email": "admin7@gmail.com",
     "password": "12345678"
 }
 
@@ -40,7 +40,7 @@ POST http://127.0.0.1:8000/login
 Content-Type: application/json
 
 {
-    "email": "y@gmail.com",
+    "email": "admin7@gmail.com",
     "password": "12345678"
 }
 

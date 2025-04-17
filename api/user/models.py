@@ -103,7 +103,7 @@ class Customer(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     referral_code = models.CharField(max_length=8, null=True, blank=True)
     referred_by = models.CharField(max_length=8, null=True, blank=True)
-    referral_point = models.FloatField(default=0)
+    referral_point = models.FloatField(default=0,null=True,blank=True)
 
 
     def __str__(self):
