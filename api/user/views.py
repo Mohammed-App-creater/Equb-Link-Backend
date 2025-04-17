@@ -73,7 +73,7 @@ def signup(request):
         elif role == "equb_admin":
             EqubAdmin.objects.create(user=user, name=name, phone=phone, photo=photo)
         elif role == "admin":
-            Admin.objects.create(user=user, full_name=name, phone=phone, photo=photo)
+            Admin.objects.create(user=user, name=name, phone=phone, photo=photo)
 
         return Response({
             "message": "success",

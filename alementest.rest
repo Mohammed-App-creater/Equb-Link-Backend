@@ -1,24 +1,25 @@
 
-POST http://127.0.0.1:8000/signup
+POST http://49.13.235.107:3006/signup
 Content-Type: application/json
 
 {
     "name": "mengistu Mamo",
-    "email": "y@gmail.com",
+    "email": "ya@gmail.com",
     "phone": "+251969489521",
     "password": "12345678",
     "re_password": "12345678",
     "referred_by": "",
     "role": "customer"
- }
+}
+
 
 ###
-POST http://127.0.0.1:8000/signup
+POST http://49.13.235.107:3006/signup
 Content-Type: application/json
 
 {
     "name": "rock Man",
-    "email": "admin7@gmail.com",
+    "email": "admin10@gmail.com",
     "phone": "+251969489521",
     "password": "12345678",
     "re_password": "12345678",
