@@ -8,7 +8,17 @@ from drf_spectacular.views import (
     SpectacularRedocView,
     SpectacularSwaggerView,
 )
+
+from wagtail.admin import urls as wagtailadmin_urls
+from wagtail.documents import urls as wagtaildocs_urls
+from wagtail import urls as wagtail_urls
+
 urlpatterns = [
+
+
+
+
+
     path('admin/', admin.site.urls),
         path("", include("advert.urls")),
     path(
@@ -20,7 +30,10 @@ urlpatterns = [
         include("equbApp.urls"),
     ),
 
-    
+        path('cms/', include(wagtailadmin_urls)),        # CMS admin
+    path('documents/', include(wagtaildocs_urls)),   # Document serving
+    # your other app URLs
+    path('', include(wagtail_urls)), 
     # YOUR PATTERNS
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
     # Optional UI:
@@ -37,3 +50,4 @@ urlpatterns = [
 ]
 
 urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+
