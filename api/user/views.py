@@ -71,7 +71,7 @@ def signup(request):
         elif role == "admin":
             profile = Admin.objects.create(
                 user=user,
-                full_name=name,
+                name=name,
                 phone=phone,
                 photo=photo
             )
