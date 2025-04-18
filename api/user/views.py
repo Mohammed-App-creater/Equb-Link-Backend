@@ -14,7 +14,7 @@ from .serializers import (
     UserSerializer,
     CustomerDataSerializer,
     AdminSerializer,
-    EqubAdminDataSerializer
+    EqubAdminDataSerializer,AdminPostSerializer
 )
 
 User = get_user_model()
@@ -75,7 +75,7 @@ def signup(request):
                 phone=phone,
                 photo=photo
             )
-            serializer = AdminSerializer(profile)
+            serializer = AdminPostSerializer(profile)
         elif role == "equb_admin":
             profile = EqubAdmin.objects.create(
                 user=user,
