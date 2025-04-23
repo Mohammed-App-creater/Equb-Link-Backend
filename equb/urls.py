@@ -42,10 +42,10 @@ urlpatterns = [
         SpectacularRedocView.as_view(url_name="schema"),
         name="redoc",
     ),
-    path('cms/', include(wagtailadmin_urls)),        # CMS admin
-    path('documents/', include(wagtaildocs_urls)),   # Document serving
-    # your other app URLs
-    path('', include(wagtail_urls)), 
+    # path('cms/', include(wagtailadmin_urls)),        # CMS admin
+    # path('documents/', include(wagtaildocs_urls)),   # Document serving
+    # # your other app URLs
+    # path('', include(wagtail_urls)), 
 ]
 
 urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
