@@ -14,12 +14,12 @@ Content-Type: application/json
 
 
 ###
-POST http://49.13.235.107:3006/signup
+POST http://127.0.0.1:8000/signup
 Content-Type: application/json
 
 {
     "name": "natan Man",
-    "email": "natan@gmail.com",
+    "email": "mn@gmail.com",
     "phone": "+251969489521",
     "password": "12345678",
     "re_password": "12345678",
@@ -41,13 +41,13 @@ POST http://127.0.0.1:8000/login
 Content-Type: application/json
 
 {
-    "email": "bn@gmail.com",
+    "email": "mn@gmail.com",
     "password": "12345678"
 }
 
 ###
 POST http://127.0.0.1:8000/admin_equb_types/
-Authorization: Token 5b3955a585617d369f2e058e76551704a8b08f0f
+Authorization: Token bc816762e3f923433c71d32b5f5d95f686f9e170
 Content-Type: application/json
 
 {
@@ -56,14 +56,15 @@ Content-Type: application/json
 
 
 ###
-GET http://127.0.0.1:8000/admin_equb_types/
-Authorization: Token 5b3955a585617d369f2e058e76551704a8b08f0f
+GET http://127.0.0.1:8000/admin_equb_types/8161b666-df6b-4827-ab6a-560da4fef195/
+Authorization: Token bc816762e3f923433c71d32b5f5d95f686f9e170
 Content-Type: application/json
+
 
 # Admin  or View, update,create and delete all course
 ###
 POST http://127.0.0.1:8000/admin_equb_categories/
-Authorization: Token 5b3955a585617d369f2e058e76551704a8b08f0f
+Authorization: Token bc816762e3f923433c71d32b5f5d95f686f9e170
 Content-Type: application/json
 
 {
@@ -74,7 +75,7 @@ Content-Type: application/json
 
 ###
 GET http://127.0.0.1:8000/admin_equb_categories/
-Authorization: Token 5b3955a585617d369f2e058e76551704a8b08f0f
+Authorization: Token bc816762e3f923433c71d32b5f5d95f686f9e170
 Content-Type: application/json
 
 ###
@@ -84,7 +85,7 @@ Content-Type: application/json
 
 ###
 POST http://127.0.0.1:8000/admin_equb_subcategories/
-Authorization: Token 5b3955a585617d369f2e058e76551704a8b08f0f
+Authorization: Token bc816762e3f923433c71d32b5f5d95f686f9e170
 Content-Type: application/json
 
 {
@@ -96,14 +97,14 @@ Content-Type: application/json
 }
 ###
 GET http://127.0.0.1:8000/admin_equb_subcategories/
-Authorization: Token 5b3955a585617d369f2e058e76551704a8b08f0f
+Authorization: Token bc816762e3f923433c71d32b5f5d95f686f9e170
 Content-Type: application/json
 
 # Topic Admin or View, update,create and delete all
 
 ###
 POST http://127.0.0.1:8000/admin_equbs/
-Authorization: Token 5b3955a585617d369f2e058e76551704a8b08f0f
+Authorization: Token bc816762e3f923433c71d32b5f5d95f686f9e170
 Content-Type: application/json
 
 {
@@ -123,7 +124,7 @@ Content-Type: application/json
 
 ###
 GET http://127.0.0.1:8000/admin_equbs/
-Authorization: Token 5b3955a585617d369f2e058e76551704a8b08f0f
+Authorization: Token bc816762e3f923433c71d32b5f5d95f686f9e170
 Content-Type: application/json
 
 ###
@@ -209,7 +210,7 @@ Content-Type: application/json
 
 ###
 GET http://127.0.0.1:8000/admin_equb_report/
-Authorization: Token 5b3955a585617d369f2e058e76551704a8b08f0f
+Authorization: Token bc816762e3f923433c71d32b5f5d95f686f9e170
 Content-Type: application/json
 
 
@@ -217,7 +218,7 @@ Content-Type: application/json
 
 ###
 GET http://127.0.0.1:8000/equb_detailed_report/9c2d3c32-2181-44a0-96c6-340389b5ac46/
-Authorization: Token 5b3955a585617d369f2e058e76551704a8b08f0f
+Authorization: Token bc816762e3f923433c71d32b5f5d95f686f9e170
 Content-Type: application/json
 
 
@@ -243,7 +244,7 @@ Content-Type: application/json
 
 ###
 POST http://127.0.0.1:8000/admin_faqs/
-Authorization: Token 5b3955a585617d369f2e058e76551704a8b08f0f
+Authorization: Token bc816762e3f923433c71d32b5f5d95f686f9e170
 Content-Type: application/json
 
 {

@@ -9,18 +9,18 @@ urlpatterns = [
         name="equb-type-list-create-admin",
     ),
     path(
-        "admin_equb_types/<int:id>/",
+        "admin_equb_types/<uuid:id>/",
         equb_type_detail_admin,
         name="equb-type-detail-admin",
     ),
-    # EqubCategory
+    # EqubCategory 
     path(
         "admin_equb_categories/",
         equb_category_list_create_admin,
         name="equb-category-list-create-admin",
     ),
     path(
-        "admin_equb_categories/<int:id>/",
+        "admin_equb_categories/<uuid:id>/",
         equb_category_detail_admin,
         name="equb-category-detail-admin",
     ),
@@ -31,19 +31,19 @@ urlpatterns = [
         name="equb-subcategory-list-create-admin",
     ),
     path(
-        "admin_equb_subcategories/<int:id>/",
+        "admin_equb_subcategories/<uuid:id>/",
         equb_subcategory_detail_admin,
         name="equb-subcategory-detail-admin",
     ),
     path(
-        "equb_subcategories/by_category/<int:category_id>/",
+        "equb_subcategories/by_category/<uuid:category_id>/",
         list_subcategories_by_category,
         name="equb-subcategories-by-category",
     ),
 
     # Equb
     path("admin_equbs/", equb_list_create_admin, name="equb-list-create-admin"),
-    path("admin_equbs/<int:id>/", equb_detail_admin, name="equb-detail-admin"),
+    path("admin_equbs/<uuid:id>/", equb_detail_admin, name="equb-detail-admin"),
     path("customer_equbs/", equb_list_customer, name="equb-list-customer"),
     path("customer_equbs_joined/", equbs_user_joined, name="equbs-user-joined"),
     path('equb/<uuid:equb_id>/members/', list_equb_members, name='equb-members'),
@@ -71,10 +71,10 @@ urlpatterns = [
     path('list_user_payment_history/', list_user_payment_history, name='list_user_payment_history'),
 
     # user_equb_payment_summary
-    path('user_equb_payment_summary/<int:user_id>/', user_equb_payment_summary, name='user_equb_payment_summary'),
+    path('user_equb_payment_summary/<uuid:user_id>/', user_equb_payment_summary, name='user_equb_payment_summary'),
 
-    path('equbs_users_total_paid/<uuid:equb_id>/<int:user_id>/', customer_total_payment_for_equb),
-    path('users_equb_contributions/<int:user_id>/', customer_equb_contributions),
+    path('equbs_users_total_paid/<uuid:equb_id>/<uuid:user_id>/', customer_total_payment_for_equb),
+    path('users_equb_contributions/<uuid:user_id>/', customer_equb_contributions),
     # admin_view_equbs_with_members
     path('admin_view_equbs_with_members/', admin_view_equbs_with_members, name='admin_view_equbs_with_members'),
     # upload_receipt
