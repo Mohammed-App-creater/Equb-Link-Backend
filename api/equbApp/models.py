@@ -139,7 +139,7 @@ class EqubMember(models.Model):
         unique_together = ("user", "equb")
 
     def __str__(self):
-        return f"{self.user.full_name} - {self.equb.name}"
+        return f"{self.user} - {self.equb}"
 
 
 # ===========================
@@ -170,7 +170,7 @@ class Payment(models.Model):
         unique_together = ("equb_member", "round_number")
 
     def __str__(self):
-        return f"Payment {self.transaction_id} for {self.equb_member.user.full_name}"
+        return f"Payment {self.transaction_id} for {self.equb_member.user.name}"
 
 
 # ===========================
@@ -187,7 +187,7 @@ class LotteryWinner(models.Model):
         unique_together = ("equb", "round_number")
 
     def __str__(self):
-        return f"{self.winner.user.full_name} - {self.equb.name} | Round {self.round_number}"
+        return f"{self.winner.user.name} - {self.equb.name} | Round {self.round_number}"
 
 
 # ===========================
@@ -205,7 +205,7 @@ class Notification(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"Notification for {self.user.full_name}"
+        return f"Notification for {self.user.name}"
 
 
 # ===========================
@@ -328,7 +328,7 @@ class SupportTicket(models.Model):
 #     )
 
 #     def __str__(self):
-#         return f"{self.user.full_name} - {self.equb.name}"
+#         return f"{self.user.name} - {self.equb.name}"
 
 
 # # Payment Model with UUID as primary key
@@ -360,7 +360,7 @@ class SupportTicket(models.Model):
 #     draw_date = models.DateTimeField()
 
 #     def __str__(self):
-#         return f"{self.winner.full_name} - {self.equb.name}"
+#         return f"{self.winner.name} - {self.equb.name}"
 
 
 # # Notification Model with UUID as primary key
