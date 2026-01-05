@@ -243,3 +243,6 @@ class SupportTicketAdmin(admin.ModelAdmin):
     search_fields = ("subject", "user__full_name", "message")
     list_filter = ("status",)
     readonly_fields = ("created_at", "updated_at")
+
+
+

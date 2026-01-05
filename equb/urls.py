@@ -15,8 +15,6 @@ from wagtail import urls as wagtail_urls
 
 urlpatterns = [
 
-
-
     path('admin/', admin.site.urls),
         path("", include("advert.urls")),
     path(

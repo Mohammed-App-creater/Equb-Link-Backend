@@ -49,6 +49,7 @@ INSTALLED_APPS = [
     "jazzmin",
     "admin_interface",
     "colorfield",
+    
     # old
     "django.contrib.admin",
     "django.contrib.auth",
