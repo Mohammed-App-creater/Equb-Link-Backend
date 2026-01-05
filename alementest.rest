@@ -1,5 +1,5 @@
 
-POST http://49.13.235.107:3006/signup
+POST http://127.0.0.1:8000/signup
 Content-Type: application/json
 
 {
@@ -27,11 +27,12 @@ Content-Type: application/json
  }
 
 ###
-POST http://49.13.235.107:3006/login
+POST http://127.0.0.1:8000/login
 Content-Type: application/json
 
 {
-    "email": "baa@gmail.com",
+    "phone": "+251969489521",
+    "email": "",
     "password": "12345678"
 }
 

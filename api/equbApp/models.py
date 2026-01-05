@@ -1,123 +1,393 @@
 import uuid
 from django.db import models
-from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
 from user.models import User
 
 
+# ===========================
+# BASE ABSTRACT MODELS
+# ===========================
+class UUIDModel(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
-# EqubType Model with UUID as primary key
+    class Meta:
+        abstract = True
+
+
+class TimeStampedModel(models.Model):
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        abstract = True
+
+
+# ===========================
+# EQUb TYPE
+# ===========================
 class EqubType(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=50, unique=True)
+    description = models.TextField(blank=True)
 
     def __str__(self):
         return self.name
 
-# EqubCategory Model with UUID as primary key
+
+# ===========================
+# CATEGORY & SUBCATEGORY
+# ===========================
 class EqubCategory(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    name = models.CharField(max_length=100)
-    image = models.ImageField(upload_to='equb_categories/', null=True, blank=True)
-    description = models.TextField()
+    name = models.CharField(max_length=100, unique=True)
+    image = models.ImageField(upload_to="equb_categories/", null=True, blank=True)
+    description = models.TextField(blank=True)
 
     def __str__(self):
         return self.name
 
-# EqubSubCategory Model with UUID as primary key
+
 class EqubSubCategory(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    category = models.ForeignKey(EqubCategory, on_delete=models.CASCADE)
+    category = models.ForeignKey(
+        EqubCategory, on_delete=models.CASCADE, related_name="subcategories"
+    )
     name = models.CharField(max_length=100)
-    image = models.ImageField(upload_to='sub_equb_categories/', null=True, blank=True)
-    description = models.TextField(null=True, blank=True)
-    default_equb_type = models.ForeignKey(EqubType, on_delete=models.SET_NULL, null=True, blank=True)
+    image = models.ImageField(upload_to="sub_equb_categories/", null=True, blank=True)
+    description = models.TextField(blank=True)
+
+    class Meta:
+        unique_together = ("category", "name")
 
     def __str__(self):
-        return self.name
+        return f"{self.category.name} → {self.name}"
 
-# Equb Model with UUID as primary key
 
+# ===========================
+# EQUb
+# ===========================
 class Equb(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=255)
-    owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name='equbs')
-    subcategory = models.ForeignKey(EqubSubCategory, on_delete=models.CASCADE, related_name='equbs')
+    owner = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="owned_equbs"
+    )
+    subcategory = models.ForeignKey(
+        EqubSubCategory, on_delete=models.PROTECT, related_name="equbs"
+    )
+    equb_type = models.ForeignKey(
+        EqubType, on_delete=models.SET_NULL, null=True, blank=True
+    )
     start_date = models.DateField()
     end_date = models.DateField()
-    lottery_draw_schedule = models.DateField()
-    rules_and_conditions = models.TextField()
-    rules_and_condit_status = models.BooleanField(default=False)
+    lottery_draw_schedule = models.DateField(null=True, blank=True)
+    rules = models.TextField()
+    rules_approved = models.BooleanField(default=False)
     payout_system = models.CharField(
         max_length=50,
         choices=[
-            ('first_come_first_serve', 'First Come First Serve'),
-            ('random', 'Random')
-        ]
+            ("first_come_first_serve", "First Come First Serve"),
+            ("random", "Random (Lottery)"),
+        ],
     )
-    total_number_of_members = models.PositiveIntegerField(default=10)  
-    payment_at_each_round = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)  
+    total_members = models.PositiveIntegerField(default=10)
+    payment_per_round = models.DecimalField(
+        max_digits=10, decimal_places=2, default=0.00
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=[
+            ("draft", "Draft"),
+            ("active", "Active"),
+            ("completed", "Completed"),
+            ("cancelled", "Cancelled"),
+        ],
+        default="draft",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return self.name
 
-# EqubMember Model with UUID as primary key
+
+# ===========================
+# EQUb MEMBER
+# ===========================
 class EqubMember(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    equb = models.ForeignKey(Equb, on_delete=models.CASCADE)
-    total_members = models.IntegerField()
-    status = models.CharField(max_length=50, choices=[('active', 'Active'), ('inactive', 'Inactive')], default='active')
+    equb = models.ForeignKey(Equb, on_delete=models.CASCADE, related_name="members")
+    status = models.CharField(
+        max_length=20,
+        choices=[
+            ("active", "Active"),
+            ("inactive", "Inactive"),
+            ("removed", "Removed"),
+        ],
+        default="active",
+    )
+    payment_status = models.CharField(
+        max_length=20,
+        choices=[("pending", "Pending"), ("paid", "Paid")],
+        default="pending",
+    )
+    has_received_payout = models.BooleanField(default=False)
     joined_at = models.DateTimeField(auto_now_add=True)
-    payment_status = models.CharField(max_length=50, choices=[('pending', 'Pending'), ('paid', 'Paid')], default='pending')
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ("user", "equb")
 
     def __str__(self):
-        return f'{self.user.full_name} - {self.equb.name}'
+        return f"{self.user.full_name} - {self.equb.name}"
 
-# Payment Model with UUID as primary key
+
+# ===========================
+# PAYMENT / CONTRIBUTION
+# ===========================
 class Payment(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    equb_member = models.ForeignKey(EqubMember, on_delete=models.CASCADE)
+    equb_member = models.ForeignKey(
+        EqubMember, on_delete=models.CASCADE, related_name="payments"
+    )
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     payment_method = models.CharField(max_length=50)
     transaction_id = models.CharField(max_length=100)
     paid_at = models.DateTimeField(null=True, blank=True)
-    recipt_image = models.ImageField(upload_to='recipt_categories/', null=True, blank=True)
-    status = models.CharField(max_length=50, choices=[('pending', 'Pending'), ('completed', 'Completed')], default='pending')
+    receipt_image = models.ImageField(
+        upload_to="receipt_images/", null=True, blank=True
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=[("pending", "Pending"), ("completed", "Completed")],
+        default="pending",
+    )
+    round_number = models.PositiveIntegerField(default=1)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ("equb_member", "round_number")
 
     def __str__(self):
-        return f'Payment {self.transaction_id} for {self.equb_member.user.name}'
+        return f"Payment {self.transaction_id} for {self.equb_member.user.full_name}"
 
-# LotteryWinner Model with UUID as primary key
+
+# ===========================
+# LOTTERY WINNER
+# ===========================
 class LotteryWinner(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     equb = models.ForeignKey(Equb, on_delete=models.CASCADE)
-    winner = models.ForeignKey(User, on_delete=models.CASCADE)
-    draw_date = models.DateTimeField()
+    winner = models.ForeignKey(EqubMember, on_delete=models.CASCADE)
+    round_number = models.PositiveIntegerField()
+    draw_date = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("equb", "round_number")
 
     def __str__(self):
-        return f'{self.winner.full_name} - {self.equb.name}'
+        return f"{self.winner.user.full_name} - {self.equb.name} | Round {self.round_number}"
 
-# Notification Model with UUID as primary key
+
+# ===========================
+# NOTIFICATIONS
+# ===========================
 class Notification(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="notifications"
+    )
     notif_type = models.CharField(max_length=50)
     message = models.TextField()
     is_read = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f'Notification for {self.user.name}'
+        return f"Notification for {self.user.full_name}"
 
-# SupportTicket Model with UUID as primary key
+
+# ===========================
+# SUPPORT TICKETS
+# ===========================
 class SupportTicket(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="support_tickets"
+    )
     subject = models.CharField(max_length=255)
     message = models.TextField()
-    status = models.CharField(max_length=50, choices=[('open', 'Open'), ('resolved', 'Resolved')], default='open')
+    status = models.CharField(
+        max_length=20,
+        choices=[
+            ("open", "Open"),
+            ("in_progress", "In Progress"),
+            ("resolved", "Resolved"),
+        ],
+        default="open",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f'Support Ticket - {self.subject}'
+        return f"Support Ticket - {self.subject}"
+
+
+# import uuid
+# from django.db import models
+# from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
+# from user.models import User
+
+
+# # EqubType Model with UUID as primary key
+# class EqubType(models.Model):
+#     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+#     name = models.CharField(max_length=50, unique=True)
+
+#     def __str__(self):
+#         return self.name
+
+
+# # EqubCategory Model with UUID as primary key
+# class EqubCategory(models.Model):
+#     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+#     name = models.CharField(max_length=100)
+#     image = models.ImageField(upload_to="equb_categories/", null=True, blank=True)
+#     description = models.TextField()
+
+#     def __str__(self):
+#         return self.name
+
+
+# # EqubSubCategory Model with UUID as primary key
+# class EqubSubCategory(models.Model):
+#     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+#     category = models.ForeignKey(EqubCategory, on_delete=models.CASCADE)
+#     name = models.CharField(max_length=100)
+#     image = models.ImageField(upload_to="sub_equb_categories/", null=True, blank=True)
+#     description = models.TextField(null=True, blank=True)
+#     default_equb_type = models.ForeignKey(
+#         EqubType, on_delete=models.SET_NULL, null=True, blank=True
+#     )
+
+#     def __str__(self):
+#         return self.name
+
+
+# # Equb Model with UUID as primary key
+
+
+# class Equb(models.Model):
+#     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+#     name = models.CharField(max_length=255)
+#     owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name="equbs")
+#     subcategory = models.ForeignKey(
+#         EqubSubCategory, on_delete=models.CASCADE, related_name="equbs"
+#     )
+#     default_equb_type = models.ForeignKey(
+#         EqubType, on_delete=models.SET_NULL, null=True, blank=True
+#     )
+#     start_date = models.DateField()
+#     end_date = models.DateField()
+#     lottery_draw_schedule = models.DateField()
+#     rules_and_conditions = models.TextField()
+#     rules_and_condit_status = models.BooleanField(default=False)
+#     payout_system = models.CharField(
+#         max_length=50,
+#         choices=[
+#             ("first_come_first_serve", "First Come First Serve"),
+#             ("random", "Random"),
+#         ],
+#     )
+#     total_number_of_members = models.PositiveIntegerField(default=10)
+#     payment_at_each_round = models.DecimalField(
+#         max_digits=10, decimal_places=2, default=0.00
+#     )
+#     created_at = models.DateTimeField(auto_now_add=True)
+
+#     def __str__(self):
+#         return self.name
+
+
+# # EqubMember Model with UUID as primary key
+# class EqubMember(models.Model):
+#     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+#     user = models.ForeignKey(User, on_delete=models.CASCADE)
+#     equb = models.ForeignKey(Equb, on_delete=models.CASCADE)
+#     status = models.CharField(
+#         max_length=50,
+#         choices=[("active", "Active"), ("inactive", "Inactive")],
+#         default="active",
+#     )
+#     joined_at = models.DateTimeField(auto_now_add=True)
+#     payment_status = models.CharField(
+#         max_length=50,
+#         choices=[("pending", "Pending"), ("paid", "Paid")],
+#         default="pending",
+#     )
+
+#     def __str__(self):
+#         return f"{self.user.full_name} - {self.equb.name}"
+
+
+# # Payment Model with UUID as primary key
+# class Payment(models.Model):
+#     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+#     equb_member = models.ForeignKey(EqubMember, on_delete=models.CASCADE)
+#     amount = models.DecimalField(max_digits=10, decimal_places=2)
+#     payment_method = models.CharField(max_length=50)
+#     transaction_id = models.CharField(max_length=100)
+#     paid_at = models.DateTimeField(null=True, blank=True)
+#     recipt_image = models.ImageField(
+#         upload_to="recipt_categories/", null=True, blank=True
+#     )
+#     status = models.CharField(
+#         max_length=50,
+#         choices=[("pending", "Pending"), ("completed", "Completed")],
+#         default="pending",
+#     )
+
+#     def __str__(self):
+#         return f"Payment {self.transaction_id} for {self.equb_member.user.name}"
+
+
+# # LotteryWinner Model with UUID as primary key
+# class LotteryWinner(models.Model):
+#     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+#     equb = models.ForeignKey(Equb, on_delete=models.CASCADE)
+#     winner = models.ForeignKey(User, on_delete=models.CASCADE)
+#     draw_date = models.DateTimeField()
+
+#     def __str__(self):
+#         return f"{self.winner.full_name} - {self.equb.name}"
+
+
+# # Notification Model with UUID as primary key
+# class Notification(models.Model):
+#     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+#     user = models.ForeignKey(User, on_delete=models.CASCADE)
+#     notif_type = models.CharField(max_length=50)
+#     message = models.TextField()
+#     is_read = models.BooleanField(default=False)
+#     created_at = models.DateTimeField(auto_now_add=True)
+
+#     def __str__(self):
+#         return f"Notification for {self.user.name}"
+
+
+# # SupportTicket Model with UUID as primary key
+# class SupportTicket(models.Model):
+#     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+#     user = models.ForeignKey(User, on_delete=models.CASCADE)
+#     subject = models.CharField(max_length=255)
+#     message = models.TextField()
+#     status = models.CharField(
+#         max_length=50,
+#         choices=[("open", "Open"), ("resolved", "Resolved")],
+#         default="open",
+#     )
+#     created_at = models.DateTimeField(auto_now_add=True)
+
+#     def __str__(self):
+#         return f"Support Ticket - {self.subject}"

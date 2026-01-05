@@ -7,7 +7,8 @@ class Advert(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     title = models.CharField(max_length=200)
     images = models.ImageField(upload_to="advert-img", null=True, blank=True)
-    wallet = models.FloatField()
+    images2 = models.ImageField(upload_to="advert-img", null=True, blank=True)
+    images3 = models.ImageField(upload_to="advert-img", null=True, blank=True)
 
     def __str__(self) -> str:
         return str(self.id)
@@ -44,9 +45,9 @@ class FAQ(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        ordering = ['-created_at']
-        verbose_name = 'FAQ'
-        verbose_name_plural = 'FAQs'
+        ordering = ["-created_at"]
+        verbose_name = "FAQ"
+        verbose_name_plural = "FAQs"
 
     def __str__(self):
         return self.question
