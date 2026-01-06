@@ -76,23 +76,42 @@ def AdvertGetDeleteUpdateAdmin(request, id):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
-
 @api_view(["GET"])
+@permission_classes([IsAuthenticated])
 def AdvertGetPublic(request):
     """
-    List and post a data method AdevertSerializer
+    List all adverts with absolute URLs for images in an array.
     """
-    if request.method == "GET":
-        advert = Advert.objects.all()
-        serializer = AdevertSerializer(advert, many=True)
-        return Response(
-            {"data": serializer.data, "message": "Get successfully"},
-            status=status.HTTP_200_OK,
-        )
+    adverts = Advert.objects.all()
+    serialized_data = []
+
+    for advert in adverts:
+        data = AdevertSerializer(advert).data
+
+        # Combine all image fields into a single array with absolute URLs
+        images_array = []
+        if advert.images:
+            images_array.append(request.build_absolute_uri(advert.images.url))
+        if advert.images2:
+            images_array.append(request.build_absolute_uri(advert.images2.url))
+        if advert.images3:
+            images_array.append(request.build_absolute_uri(advert.images3.url))
+
+        data['images'] = images_array  # overwrite 'images' field with array
+        # Optionally remove separate fields if present
+        data.pop('images2', None)
+        data.pop('images3', None)
+
+        serialized_data.append(data)
+
+    return Response(
+        {
+            "data": serialized_data,
+            "message": "Adverts fetched successfully"
+        },
+        status=status.HTTP_200_OK
+    )
     
-
-
-
 # Admin endpoints
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated,IsAdminUser])  # Use custom admin permission if available

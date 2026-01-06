@@ -12,7 +12,9 @@ from .serializers import (
     AdminPostSerializer,
 )
 import random
-
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser
+from rest_framework.response import Response
 User = get_user_model()
 
 
@@ -97,6 +99,100 @@ def signup(request):
         status=status.HTTP_201_CREATED,
     )
 
+# =========================
+# CUSTOMER SIGNUP
+# =========================
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def customer_signup(request):
+    data = request.data
+
+    phone = data.get("phone")
+    email = data.get("email")
+    password = data.get("password")
+    re_password = data.get("re_password")
+    name = data.get("name")
+    photo = request.FILES.get("photo")
+
+    if not all([phone, password, re_password, name]):
+        return Response({"error": "Missing fields"}, status=400)
+
+    if password != re_password:
+        return Response({"error": "Passwords do not match"}, status=400)
+
+    if User.objects.filter(phone=phone).exists():
+        return Response({"error": "Phone already exists"}, status=400)
+
+    user = User.objects.create_customer(phone, password, email)
+    token = Token.objects.create(user=user)
+
+    referral_code = name[:4].upper() + str(random.randint(1000, 9999))
+
+    customer = Customer.objects.create(
+        user=user,
+        name=name,
+        phone=phone,
+        photo=photo,
+        referral_code=referral_code,
+    )
+
+    return Response({
+        "message": "success",
+        "role": "customer",
+        "token": token.key,
+        "data": CustomerDataSerializer(customer).data
+    }, status=201)
+
+# =========================
+# CREATE ADMIN (BY SUPERADMIN)      
+# =========================
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated, IsAdminUser])
+def create_admin(request):
+    data = request.data
+
+    phone = data.get("phone")
+    password = data.get("password")
+    name = data.get("name")
+
+    user = User.objects.create_admin(phone, password)
+
+    admin = Admin.objects.create(
+        user=user,
+        name=name,
+        phone=phone,
+    )
+
+    return Response({
+        "message": "admin created",
+        "data": AdminPostSerializer(admin).data
+    }, status=201)
+
+# =========================
+# CREATE EQUB ADMIN (BY SUPERADMIN) 
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated, IsAdminUser])
+def create_equb_admin(request):
+    data = request.data
+
+    phone = data.get("phone")
+    password = data.get("password")
+    name = data.get("name")
+
+    user = User.objects.create_equb_admin(phone, password)
+
+    equb_admin = EqubAdmin.objects.create(
+        user=user,
+        name=name,
+        phone=phone,
+    )
+
+    return Response({
+        "message": "equb admin created",
+        "data": EqubAdminDataSerializer(equb_admin).data
+    }, status=201)
 
 # =========================
 # LOGIN (PHONE BASED)

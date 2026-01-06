@@ -1,15 +1,15 @@
 
-POST http://127.0.0.1:8000/signup
+POST http://127.0.0.1:8000/signup/customer/
 Content-Type: application/json
 
 {
-    "name": "mengistu Mamo",
-    "email": "kk@gmail.com",
-    "phone": "+251969489521",
+    "name": "man uniter ",
+    "email": "as@gmail.com",
+    "phone": "+251910285276",
     "password": "12345678",
     "re_password": "12345678",
-    "referred_by": "",
-    "role": "customer"
+    "referred_by": ""
+
 }
 
 
@@ -31,7 +31,7 @@ POST http://127.0.0.1:8000/login
 Content-Type: application/json
 
 {
-    "phone": "+251969489521",
+    "phone": "+251910285276",
     "email": "",
     "password": "12345678"
 }
@@ -57,8 +57,8 @@ Content-Type: application/json
 
 
 ###
-GET http://127.0.0.1:8000/admin_equb_types/8161b666-df6b-4827-ab6a-560da4fef195/
-Authorization: Token bc816762e3f923433c71d32b5f5d95f686f9e170
+GET http://127.0.0.1:8000/mobile_equb_categories/
+Authorization: Token c4bb1e395f025ced16c294196d03497cf0cfd676
 Content-Type: application/json
 
 

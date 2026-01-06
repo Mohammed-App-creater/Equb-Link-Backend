@@ -7,13 +7,13 @@ from .models import *
 class AdevertSerializer(serializers.ModelSerializer):
     class Meta:
         model = Advert
-        fields = ["id", "title", "images", "wallet"]
+        fields = "__all__"
 
 
 class TestimonialSerializer(serializers.ModelSerializer):
     class Meta:
         model = Testimonial
-        fields = ["id", "name", "postion", "images", "description"]
+        fields = "__all__"
 
 
 class FeedbackSerializer(serializers.ModelSerializer):

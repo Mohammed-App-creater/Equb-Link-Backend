@@ -1,153 +1,132 @@
+# serializers.py
 from rest_framework import serializers
 from .models import (
-    EqubType, EqubCategory, EqubSubCategory,
-    Equb, EqubMember, Payment, LotteryWinner,
-    Notification, SupportTicket
+    EqubType,
+    EqubCategory,
+    Equb,
+    EqubMember,
+    Payment,
+    LotteryWinner,
+    Notification,
+    SupportTicket,
 )
-from user.models import User
 
-
-# Basic User Serializer for nested representations
-class UserSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = User
-        fields = "__all__"
-
-
+# -------------------- EqubType --------------------
 class EqubTypeSerializer(serializers.ModelSerializer):
     class Meta:
         model = EqubType
-        fields = '__all__'
+        fields = "__all__"
 
-
+# -------------------- EqubCategory --------------------
 class EqubCategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = EqubCategory
-        fields = '__all__'
+        fields = "__all__"
 
-
-class EqubSubCategorySerializer(serializers.ModelSerializer):
-    category = EqubCategorySerializer(read_only=True)
-    default_equb_type = EqubTypeSerializer(read_only=True)
+class EqubCategoryWithCountSerializer(serializers.ModelSerializer):
+    total_equbs = serializers.SerializerMethodField()
 
     class Meta:
-        model = EqubSubCategory
-        fields = '__all__'
+        model = EqubCategory
+        fields = ["id", "name", "image", "description", "is_favorite","total_equbs"]
 
-class EqubSubCategoryPostSerializer(serializers.ModelSerializer):
-    category = serializers.PrimaryKeyRelatedField(
-        read_only=False, queryset=EqubCategory.objects.all()
-    )
-    default_equb_type = serializers.PrimaryKeyRelatedField(
-        read_only=False, queryset=EqubType.objects.all()
-    )
-
-    class Meta:
-        model = EqubSubCategory
-        fields = '__all__'
-
-
-
+    def get_total_equbs(self, obj):
+        return obj.equbs.count()  # 'equbs' is the related_name from Equb.category
+# -------------------- Equb --------------------
 class EqubSerializer(serializers.ModelSerializer):
-    owner = UserSerializer(read_only=True)
-    subcategory = EqubSubCategorySerializer(read_only=True)
-    equb_type = EqubTypeSerializer(read_only=True)
-
     class Meta:
         model = Equb
-        fields = '__all__'
+        fields = "__all__"
 
-class EqubPostSerializer(serializers.ModelSerializer):
-    owner = serializers.PrimaryKeyRelatedField(
-        queryset=User.objects.all()
-    )
-    subcategory = serializers.PrimaryKeyRelatedField(
-        read_only=False, queryset=EqubSubCategory.objects.all()
-    )
-
-    class Meta:
-        model = Equb
-        fields = '__all__'
-
-class SubCategoryWithEqubsSerializer(serializers.ModelSerializer):
-    equbs = EqubSerializer(many=True, read_only=True)  # uses related_name on Equb.subcategory
-
-    class Meta:
-        model = EqubSubCategory
-        fields = ['id', 'name', 'category', 'default_equb_type', 'equbs']
-
-
-
+# -------------------- EqubMember --------------------
 class EqubMemberSerializer(serializers.ModelSerializer):
-    user = UserSerializer(read_only=True)
-    equb = EqubSerializer(read_only=True)
-
     class Meta:
         model = EqubMember
-        fields = '__all__'
+        fields = "__all__"
 
-# class EqubMemberDataSerializer(serializers.ModelSerializer):
-#     equb = serializers.UUIDField(source='equb.id', read_only=True)
+    def validate(self, data):
+        equb = data.get("equb")
+        user = data.get("user")
 
-#     class Meta:
-#         model = EqubMember
-#         fields = ['equb']  # Only return the Equb ID
+        # Member limit
+        if equb.members.count() >= equb.total_members:
+            raise serializers.ValidationError("Equb member limit reached.")
 
-class UserDetailSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = User
-        fields = "__all__"  
+        # Duplicate member
+        if EqubMember.objects.filter(user=user, equb=equb).exists():
+            raise serializers.ValidationError("User is already a member of this Equb.")
 
-class EqubMemberDataSerializer(serializers.ModelSerializer):
-    user = UserDetailSerializer(read_only=True)
-    equb = serializers.UUIDField(source='equb.id', read_only=True)
+        return data
 
-    class Meta:
-        model = EqubMember
-        fields = ['user', 'equb']
-
-class EqubMemberPostSerializer(serializers.ModelSerializer):
-    user = serializers.PrimaryKeyRelatedField(
-        read_only=False, queryset=User.objects.all()
-    )
-    equb = serializers.PrimaryKeyRelatedField(
-        read_only=False, queryset=Equb.objects.all()
-    )
-
-    class Meta:
-        model = EqubMember
-        fields = '__all__'
-
+# -------------------- Payment --------------------
 class PaymentSerializer(serializers.ModelSerializer):
-    equb_member = EqubMemberSerializer(read_only=True)
-
     class Meta:
         model = Payment
-        fields = '__all__'
+        fields = "__all__"
 
+    def validate(self, data):
+        equb_member = data.get("equb_member")
+        round_number = data.get("round_number")
+        amount = data.get("amount")
 
+        # Duplicate payment for same round
+        if Payment.objects.filter(equb_member=equb_member, round_number=round_number).exists():
+            raise serializers.ValidationError(f"Payment for round {round_number} already exists.")
+
+        # Amount check
+        if amount != equb_member.equb.contribution_amount:
+            raise serializers.ValidationError(f"Payment amount must match Equb contribution: {equb_member.equb.contribution_amount}")
+
+        return data
+
+# -------------------- LotteryWinner --------------------
 class LotteryWinnerSerializer(serializers.ModelSerializer):
-    equb = EqubSerializer(read_only=True)
-    winner = UserSerializer(read_only=True)
-
     class Meta:
         model = LotteryWinner
-        fields = '__all__'
+        fields = "__all__"
 
+    def validate(self, data):
+        equb = data.get("equb")
+        round_number = data.get("round_number")
 
+        # Duplicate winner
+        if LotteryWinner.objects.filter(equb=equb, round_number=round_number).exists():
+            raise serializers.ValidationError(f"Winner already selected for round {round_number} of this Equb.")
+        return data
+
+# -------------------- Notification --------------------
 class NotificationSerializer(serializers.ModelSerializer):
-    user = UserSerializer(read_only=True)
-
     class Meta:
         model = Notification
-        fields = '__all__'
+        fields = "__all__"
 
-
+# -------------------- SupportTicket --------------------
 class SupportTicketSerializer(serializers.ModelSerializer):
-    user = UserSerializer(read_only=True)
-
     class Meta:
         model = SupportTicket
-        fields = '__all__'
+        fields = "__all__"
 
+# -------------------- Join Equb Serializer --------------------
+class JoinEqubSerializer(serializers.Serializer):
+    equb_id = serializers.UUIDField()
+    amount = serializers.DecimalField(max_digits=10, decimal_places=2)
+    payment_method = serializers.CharField(max_length=50)
+    transaction_id = serializers.CharField(max_length=100)
+    receipt_image = serializers.ImageField()
 
+    def validate(self, data):
+        user = self.context['request'].user
+        equb_id = data.get('equb_id')
+        equb = Equb.objects.get(id=equb_id)
+
+        # Check if user is already a member
+        if EqubMember.objects.filter(user=user, equb=equb).exists():
+            raise serializers.ValidationError("You have already joined this Equb.")
+
+        # Check contribution amount
+        if data['amount'] != equb.contribution_amount * equb.total_members:
+            raise serializers.ValidationError(
+                f"You must pay the full amount until the current round: {equb.contribution_amount * equb.total_members}"
+            )
+
+        return data
