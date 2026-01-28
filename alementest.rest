@@ -1,4 +1,4 @@
-
+###
 POST http://127.0.0.1:8000/signup/customer/
 Content-Type: application/json
 
@@ -14,17 +14,24 @@ Content-Type: application/json
 
 
 ###
-POST http://127.0.0.1:8000/signup
+POST http://127.0.0.1:8000/login
 Content-Type: application/json
 
 {
-    "name": "natan Man",
-    "email": "mn@gmail.com",
-    "phone": "+251969489521",
-    "password": "12345678",
-    "re_password": "12345678",
-    "role": "admin"
- }
+    "phone": "+251910285276",
+    "email": "",
+    "password": "12345678"
+}
+
+###
+POST http://127.0.0.1:8000/login
+Content-Type: application/json
+
+{
+    "phone": "0955229457",
+    "email": "",
+    "password": "123456"
+}
 
 ###
 POST http://127.0.0.1:8000/login
@@ -38,17 +45,21 @@ Content-Type: application/json
 
 
 ###
-POST http://127.0.0.1:8000/login
+GET http://127.0.0.1:8000/mobile_equb_categories/
+Authorization: Token efb755e8b7eeb995dc046726febb86ef7c5a4cfc
 Content-Type: application/json
 
-{
-    "email": "mn@gmail.com",
-    "password": "12345678"
-}
+
+###
+GET http://127.0.0.1:8000/advert_public/
+Authorization: Token f82616293fac0dd2581a070e751097c73d448cd8
+Content-Type: application/json
+
+
 
 ###
 POST http://127.0.0.1:8000/admin_equb_types/
-Authorization: Token bc816762e3f923433c71d32b5f5d95f686f9e170
+Authorization: Token 156bf5dede1e6babfa20824bff0f931683d4b5e8
 Content-Type: application/json
 
 {
@@ -58,25 +69,30 @@ Content-Type: application/json
 
 ###
 GET http://127.0.0.1:8000/mobile_equb_categories/
-Authorization: Token c4bb1e395f025ced16c294196d03497cf0cfd676
+Authorization: Token 156bf5dede1e6babfa20824bff0f931683d4b5e8
+Content-Type: application/json
+
+###
+GET http://127.0.0.1:8000/all_equb_by_category_id/feea0f38-0f8f-4efd-96f6-05937350ee75/
+Authorization: Token 156bf5dede1e6babfa20824bff0f931683d4b5e8
+Content-Type: application/json
+
+###
+GET http://127.0.0.1:8000/all_equb_by_equbs_type/043bfacb-ddbc-4a4b-beae-774a3a87dd60/
+Authorization: Token aef6806b69c84199351e7e7360a660ede8e9550c
 Content-Type: application/json
 
 
 # Admin  or View, update,create and delete all course
 ###
-POST http://127.0.0.1:8000/admin_equb_categories/
-Authorization: Token bc816762e3f923433c71d32b5f5d95f686f9e170
+GET http://127.0.0.1:8000/mobile_equbs_by_category/
+Authorization: Token 5d89e93d669ab2faa3ce6c4393adc12e1edab832
 Content-Type: application/json
 
-{
-      "name": "Savings",
-      "image": null,
-      "description": "This category deals with collective savings."
-}
 
 ###
-GET http://127.0.0.1:8000/admin_equb_categories/
-Authorization: Token bc816762e3f923433c71d32b5f5d95f686f9e170
+GET http://127.0.0.1:8000/mobile_equbs_by_category/
+Authorization: Token 110ec793b0716031571d6ca5d01e713d014eb7da
 Content-Type: application/json
 
 ###
@@ -226,7 +242,7 @@ Content-Type: application/json
 # list_user_payment_history
 
 ###
-GET http://127.0.0.1:8000/list_user_payment_history/1/
+GET http://127.0.0.1:8000/list_user_payment_history/
 Authorization: Token 326323294ec879e27e35ed6d28387ff815eaff2f
 Content-Type: application/json
 
@@ -239,7 +255,12 @@ Content-Type: application/json
 # users_equb_contributions
 
 ###
-GET http://127.0.0.1:8000/users_equb_contributions/1/
+GET http://127.0.0.1:8000/users_equb_contributions/2/
+Content-Type: application/json
+
+###
+GET http://127.0.0.1:8000/notifications/
+Authorization: Token 40099b8440d1b0ff1540532822c0ef4270208171
 Content-Type: application/json
 
 
@@ -255,3 +276,88 @@ Content-Type: application/json
     "created_at": "2025-04-14T10:00:00Z",
     "updated_at": "2025-04-14T10:00:00Z"
   }
+
+
+
+
+###
+Post http://127.0.0.1:8000/equbs/63ce020b-faa7-461d-9534-b583e27dad1b/join/
+Authorization: Token cf25cac3c231a5a7fb537e9244981c572c3070cd
+Content-Type: application/json
+
+{
+      "user": "2",
+      "equb": "63ce020b-faa7-461d-9534-b583e27dad1b",
+      "status": "active",
+      "accept_terms": true,
+      "joined_at": "2024-04-01T10:00:00",
+      "payment_status": "paid"
+}
+
+
+###
+Post http://127.0.0.1:8000/equbs/63ce020b-faa7-461d-9534-b583e27dad1b/join/
+Authorization: Token cf25cac3c231a5a7fb537e9244981c572c3070cd
+Content-Type: application/json
+
+{
+      "user": "2",
+      "equb": "63ce020b-faa7-461d-9534-b583e27dad1b",
+      "status": "active",
+      "accept_terms": true,
+      "joined_at": "2024-04-01T10:00:00",
+      "payment_status": "paid"
+}
+
+###
+Post http://127.0.0.1:8000/equbs/63ce020b-faa7-461d-9534-b583e27dad1b/join-initial/
+Authorization: Token cf25cac3c231a5a7fb537e9244981c572c3070cd
+Content-Type: application/json
+
+{
+      "user": "2",
+      "equb": "63ce020b-faa7-461d-9534-b583e27dad1b",
+      "status": "active",
+      "accept_terms": true,
+      "joined_at": "2024-04-01T10:00:00",
+      "payment_status": "paid"
+}
+
+###
+GET http://127.0.0.1:8000/customer/dashboard/
+Authorization: Token 8a2e4443a920d69f0237aba16f77f7f14af875bc
+Content-Type: application/json
+
+###
+POST  http://127.0.0.1:8000/equbs/63ce020b-faa7-461d-9534-b583e27dad1b/pay/
+Authorization: Token 8a2e4443a920d69f0237aba16f77f7f14af875bc
+Content-Type: application/json
+
+{
+      "full_name": "John Doe",
+      "amount": 1000,
+      "payment_method": "mobile_money",
+      "transaction_id": "TXN123456789",
+      "accept_terms": true
+}
+
+###
+GET http://127.0.0.1:8000/equbs/63ce020b-faa7-461d-9534-b583e27dad1b/
+Authorization: Token 8a2e4443a920d69f0237aba16f77f7f14af875bc
+Content-Type: application/json
+
+
+###
+GET http://127.0.0.1:8000/payment/pending-list/
+Authorization: Token 8a2e4443a920d69f0237aba16f77f7f14af875bc
+Content-Type: application/json
+
+###
+POST http://127.0.0.1:8000/admin/payments/<uuid:payment_id>/approve/
+Authorization: Token 8a2e4443a920d69f0237aba16f77f7f14af875bc
+Content-Type: application/json
+
+{
+    "approval_status": "approved",
+    "approved_at": "2024-04-15T10:00:00Z"
+}

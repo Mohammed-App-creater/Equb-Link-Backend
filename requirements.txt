@@ -16,3 +16,9 @@ rpds-py==0.24.0
 sqlparse==0.5.3
 typing_extensions==4.13.1
 uritemplate==4.1.1
+wagtail
+django-jazzmin
+django-admin-interface
+django-colorfield
+
+

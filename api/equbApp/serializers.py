@@ -1,3 +1,4 @@
+from django.contrib.auth import get_user_model
 # serializers.py
 from rest_framework import serializers
 from .models import (
@@ -10,6 +11,9 @@ from .models import (
     Notification,
     SupportTicket,
 )
+
+User = get_user_model()
+
 
 # -------------------- EqubType --------------------
 class EqubTypeSerializer(serializers.ModelSerializer):
@@ -39,24 +43,48 @@ class EqubSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 # -------------------- EqubMember --------------------
+
+class UserPublicSerializer(serializers.ModelSerializer):
+    name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        fields = ("id", "phone", "name")
+
+    def get_name(self, obj):
+        return (
+            getattr(getattr(obj, "customer", None), "name", None)
+            or getattr(getattr(obj, "equbadmin", None), "name", None)
+            or getattr(getattr(obj, "admin", None), "name", None)
+        )
 class EqubMemberSerializer(serializers.ModelSerializer):
+    user = UserPublicSerializer(read_only=True)
+
     class Meta:
         model = EqubMember
-        fields = "__all__"
+        fields = (
+            "user",
+            "joined_at",
+            "status",
+        )
+
+class EqubMemberCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = EqubMember
+        fields = ("user", "equb")
 
     def validate(self, data):
-        equb = data.get("equb")
-        user = data.get("user")
+        equb = data["equb"]
+        user = data["user"]
 
-        # Member limit
         if equb.members.count() >= equb.total_members:
             raise serializers.ValidationError("Equb member limit reached.")
 
-        # Duplicate member
         if EqubMember.objects.filter(user=user, equb=equb).exists():
             raise serializers.ValidationError("User is already a member of this Equb.")
 
         return data
+
 
 # -------------------- Payment --------------------
 class PaymentSerializer(serializers.ModelSerializer):

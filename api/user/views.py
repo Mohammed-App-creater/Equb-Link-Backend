@@ -237,7 +237,7 @@ def login(request):
     return Response(
         {
             "message": "success",
-            "token": token.key,
+            "access_token": token.key,
             "data": serializer.data,
         },
         status=status.HTTP_200_OK,

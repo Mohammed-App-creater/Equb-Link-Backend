@@ -127,16 +127,58 @@ urlpatterns = [
         views.join_equb,
         name="join-equb"
     ),
+
+    # Join an Equb before it starts (Round 0)
+    path(
+        "equbs/<uuid:equb_id>/join-initial/",
+        views.join_equb_initial,
+        name="join-equb-initial"
+    ),
 # ===========================
     # CUSTOMER DASHBOARD APIs
     # ===========================
 
-    # # Customer total contribution summary
-    # path(
-    #     "customers/<uuid:customer_id>/contributions/",
-    #     views.customer_contributions,
-    #     name="customer-contributions"
-    # ),
+    # Get single Equb detail (authenticated)
+    path(
+        "equbs/<uuid:id>/",
+        views.equb_detail,
+        name="equb-detail"
+    ),
+
+    # Customer Dashboard
+    path(
+        "customer/dashboard/",
+        views.customer_dashboard,
+        name="customer-dashboard"
+    ),
+
+    # Regular Round Payment
+    path(
+        "equbs/<uuid:equb_id>/pay/",
+        views.pay_equb_contribution,
+        name="pay-equb-contribution"
+    ),
+
+    # Admin Approve Payment
+    path(
+        "admin/payments/<uuid:payment_id>/approve/",
+        views.admin_approve_payment,
+        name="admin-approve-payment"
+    ),
+    
+    
+    path(
+        "payment/pending-list/",
+        views.list_pending_payments,
+        name="List-pending-payment"
+    ),
+
+        # # Customer total contribution summary
+        # path(
+        #     "customers/<uuid:customer_id>/contributions/",
+        #     views.customer_contributions,
+        #     name="customer-contributions"
+        # ),
 
     # # Customer payment history
     # path(
@@ -158,6 +200,10 @@ urlpatterns = [
     #     views.customer_notifications,
     #     name="customer-notifications"
     # ),
+    
+    # ----------------- Notifications (Customer) -----------------
+    path("notifications/", views.customer_notifications, name="customer-notifications"),
+    path("notifications/read/", views.mark_notification_as_read, name="mark-notifications-read"),
 ]
 
 
