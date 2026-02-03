@@ -35,6 +35,9 @@ from rest_framework.response import Response
 from django.db.models import Sum
 from .models import EqubMember, Payment, LotteryWinner, Notification, Equb
 from .serializers import PaymentSerializer, LotteryWinnerSerializer, NotificationSerializer
+from django.contrib.auth import get_user_model
+from django.db.models import Q
+
 
 # ----------------- Helper function -----------------
 def paginated_response(queryset, serializer_class, request, filters=None):
@@ -44,6 +47,31 @@ def paginated_response(queryset, serializer_class, request, filters=None):
     page = paginator.paginate_queryset(queryset, request)
     serializer = serializer_class(page, many=True)
     return paginator.get_paginated_response({"data": serializer.data, "message": "Get successfully"})
+
+User = get_user_model()
+
+
+def notify_admins(message, notif_type="system"):
+    """
+    Send notification to all admin users
+    """
+    admins = User.objects.filter(
+        Q(is_superuser=True) |
+        Q(is_admin=True) |
+        Q(is_equb_admin=True)
+    )
+
+
+    notifications = [
+        Notification(
+            user=admin,
+            notif_type=notif_type,
+            message=message
+        )
+        for admin in admins
+    ]
+
+    Notification.objects.bulk_create(notifications)
 
 
 # =========================== EqubType ===========================
@@ -659,6 +687,25 @@ def join_equb_initial(request, equb_id):
         status="pending",
         round_number=0
     )
+    
+    Notification.objects.create(
+        user=user,
+        notif_type="join_request_submitted",
+        message=(
+            f"Your join request for {equb.name} has been submitted. "
+            f"First-round payment is pending admin approval."
+        )
+    )
+    
+    # Notify admins
+    notify_admins(
+        message=(
+            f"New join request (initial) from {user.phone} "
+            f"for Equb: {equb.name}"
+        ),
+        notif_type="join_request"
+    )
+
 
     return Response(
         {
@@ -761,6 +808,28 @@ def join_equb(request, equb_id):
         status="pending",
         round_number=completed_rounds  # represents payment up to this round
     )
+    
+    
+    Notification.objects.create(
+        user=user,
+        notif_type="join_request_submitted",
+        message=(
+            f"Your join request for {equb.name} has been submitted. "
+            f"You paid for {completed_rounds} previous rounds. "
+            f"Admin approval is required."
+        )
+    )
+    
+    # Notify admins
+    notify_admins(
+        message=(
+            f"New join request from {user.phone} "
+            f"for Equb: {equb.name} "
+            f"(Paid {completed_rounds} rounds)"
+        ),
+        notif_type="join_request"
+    )
+
 
     return Response(
         {
@@ -921,6 +990,26 @@ def pay_equb_contribution(request, equb_id):
         round_number=next_round,
         status="pending"
     )
+    
+    Notification.objects.create(
+        user=user,
+        notif_type="payment_submitted",
+        message=(
+            f"Your payment for {equb.name} "
+            f"(Round {next_round}) has been submitted and is pending admin approval."
+        )
+    )
+    
+    # Notify admins
+    notify_admins(
+        message=(
+            f"New payment submitted by {user.phone} "
+            f"for Equb: {equb.name} "
+            f"(Round {next_round})"
+        ),
+        notif_type="payment_submitted"
+    )
+
 
     return Response({
         "message": f"Payment submitted for round {next_round}. Awaiting approval.",

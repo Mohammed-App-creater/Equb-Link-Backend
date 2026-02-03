@@ -194,7 +194,17 @@ class Payment(models.Model):
         unique_together = ("equb_member", "round_number")
 
     def __str__(self):
-        return f"Payment {self.transaction_id} for {self.equb_member.user.name}"
+        user = self.equb_member.user
+        if hasattr(user, "customer"):
+            name = user.customer.name
+        elif hasattr(user, "equbadmin"):
+            name = user.equbadmin.name
+        elif hasattr(user, "admin"):
+            name = user.admin.name
+        else:
+            name = user.phone  # fallback if no profile
+        return f"Payment {self.transaction_id} for {name}"
+
 
 
 # ===========================
@@ -211,7 +221,17 @@ class LotteryWinner(models.Model):
         unique_together = ("equb", "round_number")
 
     def __str__(self):
-        return f"{self.winner.user.name} - {self.equb.name} | Round {self.round_number}"
+        user = self.user
+        if hasattr(user, "customer"):
+            name = user.customer.name
+        elif hasattr(user, "equbadmin"):
+            name = user.equbadmin.name
+        elif hasattr(user, "admin"):
+            name = user.admin.name
+        else:
+            name = user.phone
+        return f"Notification for {name}"
+
 
 
 # ===========================

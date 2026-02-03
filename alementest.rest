@@ -1,5 +1,5 @@
 ###
-POST http://127.0.0.1:8000/signup/customer/
+POST https://api.equb.danmartt.com/signup/customer/
 Content-Type: application/json
 
 {
@@ -14,7 +14,7 @@ Content-Type: application/json
 
 
 ###
-POST http://127.0.0.1:8000/login
+POST https://api.equb.danmartt.com/login
 Content-Type: application/json
 
 {
@@ -38,7 +38,7 @@ POST http://127.0.0.1:8000/login
 Content-Type: application/json
 
 {
-    "phone": "+251910285276",
+    "phone": "+251911223355",
     "email": "",
     "password": "12345678"
 }
@@ -325,12 +325,12 @@ Content-Type: application/json
 
 ###
 GET http://127.0.0.1:8000/customer/dashboard/
-Authorization: Token 8a2e4443a920d69f0237aba16f77f7f14af875bc
+Authorization: Token d5fca751dde8caa8c9a66bdc5372692b6940e01e
 Content-Type: application/json
 
 ###
 POST  http://127.0.0.1:8000/equbs/63ce020b-faa7-461d-9534-b583e27dad1b/pay/
-Authorization: Token 8a2e4443a920d69f0237aba16f77f7f14af875bc
+Authorization: Token be70adaf1dfdd222b89e5793cb8088a7b4ae34e5
 Content-Type: application/json
 
 {
@@ -343,7 +343,7 @@ Content-Type: application/json
 
 ###
 GET http://127.0.0.1:8000/equbs/63ce020b-faa7-461d-9534-b583e27dad1b/
-Authorization: Token 8a2e4443a920d69f0237aba16f77f7f14af875bc
+Authorization: Token be70adaf1dfdd222b89e5793cb8088a7b4ae34e5
 Content-Type: application/json
 
 
@@ -352,9 +352,15 @@ GET http://127.0.0.1:8000/payment/pending-list/
 Authorization: Token 8a2e4443a920d69f0237aba16f77f7f14af875bc
 Content-Type: application/json
 
+
+###
+GET http://127.0.0.1:8000/user/profile
+Authorization: Token 2ed04faa089d01e473023b3884004d5190b7713e
+Content-Type: application/json
+
 ###
 POST http://127.0.0.1:8000/admin/payments/<uuid:payment_id>/approve/
-Authorization: Token 8a2e4443a920d69f0237aba16f77f7f14af875bc
+Authorization: Token d5fca751dde8caa8c9a66bdc5372692b6940e01e
 Content-Type: application/json
 
 {
