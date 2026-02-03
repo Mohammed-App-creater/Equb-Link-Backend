@@ -196,7 +196,7 @@ def create_equb_admin(request):
 
 
 # =========================
-# LOGIN (PHONE BASED) with token
+# LOGIN (PHONE BASED) 
 # =========================
 @api_view(["POST"])
 def login(request):
@@ -245,10 +245,10 @@ def login(request):
     )
     
 # =========================
-# LOGIN (PHONE BASED)
+# LOGIN (PHONE BASED) with token
 # =========================
 @api_view(["POST"])
-def login(request):
+def loginWithToken(request):
     phone = request.data.get("phone")
     password = request.data.get("password")
 

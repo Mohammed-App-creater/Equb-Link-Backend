@@ -257,7 +257,18 @@ class Notification(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"Notification for {self.user.name}"
+        # Try fetching the related profile name
+        if hasattr(self.user, "admin"):
+            name = self.user.admin.name
+        elif hasattr(self.user, "customer"):
+            name = self.user.customer.name
+        elif hasattr(self.user, "equbadmin"):
+            name = self.user.equbadmin.name
+        else:
+            name = self.user.phone  # fallback
+
+        return f"Notification for {name}"
+
 
 
 # ===========================
