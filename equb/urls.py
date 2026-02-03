@@ -25,6 +25,7 @@ urlpatterns = [
         "",
         include("equbApp.urls"),
     ),
+    path("api/owner/", include("owner_panel.urls")),
 
 
     # YOUR PATTERNS

@@ -367,3 +367,9 @@ Content-Type: application/json
     "approval_status": "approved",
     "approved_at": "2024-04-15T10:00:00Z"
 }
+
+
+###
+GET http://127.0.0.1:8000/api/owner/dashboard/
+Authorization: Token b41d33045e22df92eab0ca9660764ff586d5328d
+Content-Type: application/json

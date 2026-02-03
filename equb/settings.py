@@ -28,6 +28,7 @@ CORS_ALLOWED_ORIGINS = [
     "http://192.168.137.1",
     "http://192.168.137.1:4173",
     "http://49.13.235.107:3006",
+    "http://localhost:3000",
 ]
 
 # Application definition
@@ -66,6 +67,7 @@ INSTALLED_APPS = [
     "user",
     "advert",
     "equbApp",
+    "owner_panel",
 ]
 
 MIDDLEWARE = [

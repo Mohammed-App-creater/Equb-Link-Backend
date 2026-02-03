@@ -1,6 +1,7 @@
 import uuid
 from django.db import models
 from user.models import User
+from django.conf import settings
 
 
 # ===========================
@@ -186,6 +187,15 @@ class Payment(models.Model):
         choices=[("pending", "Pending"), ("completed", "Completed")],
         default="pending",
     )
+    approved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="approved_payments"
+    )
+    approved_at = models.DateTimeField(null=True, blank=True)
+    rejected_reason = models.TextField(blank=True, null=True)
     round_number = models.PositiveIntegerField(default=1)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -204,9 +214,6 @@ class Payment(models.Model):
         else:
             name = user.phone  # fallback if no profile
         return f"Payment {self.transaction_id} for {name}"
-
-
-
 # ===========================
 # LOTTERY WINNER
 # ===========================

@@ -36,8 +36,19 @@ class MyAccountManager(BaseUserManager):
         return user
 
     def create_equb_admin(self, phone, password=None, email=None):
-        user = self.create_user(phone, password, email)
-        user.is_equb_admin = True
+        if not phone:
+            raise ValueError("Phone number is required")
+        if not password:
+            raise ValueError("Password is required")
+
+        user = self.model(
+            phone=phone,
+            email=email,
+            is_equb_admin=True,  # ✅ SET HERE
+            is_staff=True,       # ✅ REQUIRED for admin access
+            is_active=True,
+        )
+        user.set_password(password)
         user.save()
         return user
 
@@ -131,6 +142,13 @@ class EqubAdmin(models.Model):
     name = models.CharField(max_length=30)
     phone = models.CharField(max_length=15)
     photo = models.FileField(upload_to="uploads/profile", null=True, blank=True)
+    
+    def save(self, *args, **kwargs):
+        # Make sure user is marked as EqubAdmin
+        if self.user and not self.user.is_equb_admin:
+            self.user.is_equb_admin = True
+            self.user.save()
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.name
