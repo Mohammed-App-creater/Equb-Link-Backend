@@ -203,7 +203,12 @@ urlpatterns = [
     
     # ----------------- Notifications (Customer) -----------------
     path("notifications/", views.customer_notifications, name="customer-notifications"),
+    
+    path("api/owner/notifications/", views.customer_notifications, name="customer-notifications"),
+    
     path("notifications/read/", views.mark_notification_as_read, name="mark-notifications-read"),
+    
+    path("api/owner/notifications/read/", views.mark_notification_as_read, name="mark-notifications-read"),
 ]
 
 

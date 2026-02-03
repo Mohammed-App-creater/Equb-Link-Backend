@@ -1,6 +1,7 @@
 import uuid
 from django.db import models
 from user.models import User
+from django.shortcuts import get_object_or_404
 from django.conf import settings
 
 
@@ -184,7 +185,7 @@ class Payment(models.Model):
     )
     status = models.CharField(
         max_length=20,
-        choices=[("pending", "Pending"), ("completed", "Completed")],
+        choices=[("pending", "Pending"), ("completed", "Completed"), ("rejected", "Rejected")],
         default="pending",
     )
     approved_by = models.ForeignKey(

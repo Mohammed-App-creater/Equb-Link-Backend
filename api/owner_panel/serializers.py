@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from equbApp.models import (
-    Equb, EqubMember, Payment, 
+    Equb, EqubMember, Payment, LotteryWinner 
 )
 from equbApp.serializers import EqubTypeSerializer, EqubCategorySerializer
 from owner_panel.models import LotteryRound
@@ -31,32 +31,42 @@ class OwnerEqubSerializer(serializers.ModelSerializer):
         ).count()
 
 class OwnerMemberSerializer(serializers.ModelSerializer):
-
-    user_name = serializers.CharField(
-        source="user.name",
-        read_only=True
-    )
-
-    phone = serializers.CharField(
-        source="user.phone",
-        read_only=True
-    )
-
+    user_name = serializers.SerializerMethodField()
+    phone = serializers.CharField(source="user.phone", read_only=True)
+    joined_at = serializers.DateTimeField(read_only=True)
     has_paid = serializers.SerializerMethodField()
 
     class Meta:
         model = EqubMember
         fields = [
             "id",
-            "full_name",
             "user_name",
             "phone",
             "status",
-            "has_paid"
+            "joined_at",
+            "has_paid",
         ]
 
+    def get_user_name(self, obj):
+        user = obj.user
+
+        # Customer
+        if hasattr(user, "customer"):
+            return user.customer.name
+
+        # Equb Admin
+        if hasattr(user, "equbadmin"):
+            return user.equbadmin.name
+
+        # System/Admin
+        if hasattr(user, "admin"):
+            return user.admin.name
+
+        # Fallback
+        return user.phone
+
     def get_has_paid(self, obj):
-        return obj.payments.filter(status="approved").exists()
+        return obj.payment_status == "paid"
 
 class OwnerPaymentSerializer(serializers.ModelSerializer):
 
@@ -70,17 +80,36 @@ class OwnerPaymentSerializer(serializers.ModelSerializer):
         ]
 
 class OwnerRoundSerializer(serializers.ModelSerializer):
-
-    winner_id = serializers.UUIDField(
-        source="winner.id",
-        read_only=True
-    )
+    id = serializers.UUIDField(read_only=True)
+    roundNumber = serializers.IntegerField(source="round")
+    drawDate = serializers.DateTimeField(source="drawn_at", read_only=True)
+    winnerName = serializers.SerializerMethodField()
+    status = serializers.SerializerMethodField()
 
     class Meta:
         model = LotteryRound
         fields = [
-            "round",
-            "winner_id",
+            "id",
+            "roundNumber",
+            "status",
+            "winnerName",
+            "drawDate",
             "is_paid",
-            "drawn_at"
         ]
+
+    def get_status(self, obj):
+        return "completed" if obj.drawn_at else "pending"
+
+    def get_winnerName(self, obj):
+        if not obj.winner:
+            return None
+
+        user = obj.winner
+        if hasattr(user, "customer"):
+            return user.customer.name
+        elif hasattr(user, "equbadmin"):
+            return user.equbadmin.name
+        elif hasattr(user, "admin"):
+            return user.admin.name
+
+        return user.phone

@@ -2,6 +2,7 @@ from rest_framework import generics, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.utils import timezone
+import uuid
 
 from equbApp.models import Equb, EqubMember, Payment
 from .serializers import (
@@ -19,6 +20,8 @@ import hashlib
 from owner_panel.models import LotteryRound
 
 import pandas as pd
+from django.shortcuts import get_object_or_404
+
 from django.http import HttpResponse
 
 
@@ -194,11 +197,10 @@ class OwnerPaymentRejectView(APIView):
         return Response({"status": "rejected"})
 
 class OwnerDashboardView(APIView):
-
     permission_classes = [IsEqubOwner]
 
     def get(self, request):
-
+        # Queryset of all Equbs owned by this user
         equbs = Equb.objects.filter(owner=request.user)
 
         pending_members = EqubMember.objects.filter(
@@ -216,23 +218,42 @@ class OwnerDashboardView(APIView):
             "pending_members": pending_members,
             "pending_payments": pending_payments,
         })
-
 class OwnerRoundListView(generics.ListAPIView):
-
+    
     serializer_class = OwnerRoundSerializer
     permission_classes = [IsEqubOwner]
 
     def get_queryset(self):
-
-        equb = Equb.objects.get(
+        equb = get_object_or_404(
+            Equb,
             id=self.kwargs["equb_id"],
             owner=self.request.user
         )
 
+        # 1️⃣ Check for pending round
+        pending_exists = LotteryRound.objects.filter(
+            equb=equb,
+            drawn_at__isnull=True
+        ).exists()
+
+        # 2️⃣ If none, create next round
+        if not pending_exists:
+            last_round = LotteryRound.objects.filter(
+                equb=equb
+            ).order_by("-round").first()
+
+            next_round_number = 1 if not last_round else last_round.round + 1
+
+            LotteryRound.objects.create(
+                equb=equb,
+                round=next_round_number,
+                seed=uuid.uuid4().hex
+            )
+
+        # 3️⃣ Return all rounds
         return LotteryRound.objects.filter(
             equb=equb
         ).order_by("round")
-
 class OwnerDrawView(APIView):
 
     permission_classes = [IsEqubOwner]
@@ -351,12 +372,11 @@ class OwnerPayoutView(APIView):
         return Response({"status": "paid"})
 
 class OwnerExportView(APIView):
-
     permission_classes = [IsEqubOwner]
 
     def get(self, request, equb_id):
-
-        equb = Equb.objects.get(
+        equb = get_object_or_404(
+            Equb,
             id=equb_id,
             owner=request.user
         )
@@ -364,40 +384,100 @@ class OwnerExportView(APIView):
         report_type = request.GET.get("type")
 
         if report_type == "payments":
-
             qs = Payment.objects.filter(
                 equb_member__equb=equb
             )
 
-            data = []
-
-            for p in qs:
-                data.append({
+            data = [
+                {
                     "member": p.equb_member.user.phone,
                     "amount": p.amount,
                     "status": p.status,
                     "round": p.round_number,
-                    "approved_by": (
-                        p.approved_by.phone
-                        if p.approved_by else ""
-                    ),
-                })
+                    "approved_by": p.approved_by.phone if p.approved_by else "",
+                }
+                for p in qs
+            ]
 
             df = pd.DataFrame(data)
 
             response = HttpResponse(
-                content_type="application/vnd.ms-excel"
+                content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
-
-            response[
-                "Content-Disposition"
-            ] = "attachment; filename=payments.xlsx"
+            response["Content-Disposition"] = "attachment; filename=payments.xlsx"
 
             df.to_excel(response, index=False)
-
             return response
 
-        return Response(
-            {"error": "Invalid type"},
-            status=400
-        )
+        return Response({"error": "Invalid type"}, status=400)
+
+class EqubReportSummaryView(APIView):
+    permission_classes = [IsEqubOwner] # optionally, you can add IsEqubOwner permission
+
+    def get(self, request, equb_id):
+        # Fetch the Equb, ensure user is the owner
+        equb = get_object_or_404(Equb, id=equb_id, owner=request.user)
+
+        # Total members
+        total_members = equb.total_members
+
+        # Expected amount (from your model)
+        expected_amount = float(equb.total_equb_value)
+
+        # Payments for the last round
+        last_round_number = Payment.objects.filter(
+            equb_member__equb=equb
+        ).order_by('-round_number').values_list('round_number', flat=True).first()
+
+        # Collected amount (completed payments only)
+        if last_round_number:
+            completed_payments = Payment.objects.filter(
+                equb_member__equb=equb,
+                round_number=last_round_number,
+                status="completed"
+            )
+            collected_amount = float(sum(p.amount for p in completed_payments))
+            members_paid = completed_payments.values('equb_member').distinct().count()
+        else:
+            collected_amount = 0
+            members_paid = 0
+
+        pending_amount = expected_amount - collected_amount
+
+        data = {
+            "expectedAmount": expected_amount,
+            "collectedAmount": collected_amount,
+            "pendingAmount": pending_amount,
+            "membersPaid": members_paid,
+            "totalMembers": total_members,
+        }
+
+        return Response(data)
+
+class EqubActivityView(APIView):
+    permission_classes = [IsEqubOwner]  # Only Equb owner can see activity
+
+    def get(self, request, equb_id):
+        # Ensure user owns the Equb
+        equb = get_object_or_404(Equb, id=equb_id, owner=request.user)
+
+        # Get all users who belong to this Equb (members + owner)
+        equb_user_ids = list(equb.members.values_list('user_id', flat=True)) + [request.user.id]
+
+        # Fetch AuditLogs related to this Equb
+        logs = AuditLog.objects.filter(user_id__in=equb_user_ids).order_by('-timestamp')
+
+        # Map AuditLog to frontend ActivityLog structure
+        activity_logs = []
+        for log in logs:
+            activity_logs.append({
+                "id": str(log.id),
+                "type": log.action,  # assuming action matches one of your frontend types
+                "performedBy": log.user.phone,  # or log.user.username
+                "entityName": log.target,
+                "timestamp": log.timestamp.isoformat(),
+                "metadata": str(log.meta) if log.meta else None,
+            })
+
+        return Response(activity_logs)
+    
