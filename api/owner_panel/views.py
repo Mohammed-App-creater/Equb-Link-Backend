@@ -1,30 +1,35 @@
-from rest_framework import generics, status
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from django.utils import timezone
+# =========================
+# Python standard library
+# =========================
+import hashlib
+import random
 import uuid
 
-from equbApp.models import Equb, EqubMember, Payment
+# =========================
+# Third-party libraries
+# =========================
+import pandas as pd
+from django.http import HttpResponse
+from django.shortcuts import get_object_or_404
+from django.utils import timezone
+from rest_framework import generics
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
+# =========================
+# Local app imports
+# =========================
+from .models import AuditLog
+from .permissions import IsEqubOwner
 from .serializers import (
     OwnerEqubSerializer,
     OwnerMemberSerializer,
     OwnerPaymentSerializer,
-    OwnerRoundSerializer
+    OwnerRoundSerializer,
 )
-from .permissions import IsEqubOwner
-from .models import AuditLog
 
-import random
-import hashlib
-
+from equbApp.models import Equb, EqubMember, EqubType, EqubCategory, Payment
 from owner_panel.models import LotteryRound
-
-import pandas as pd
-from django.shortcuts import get_object_or_404
-
-from django.http import HttpResponse
-
-
 
 
 class OwnerEqubListCreateView(generics.ListCreateAPIView):
@@ -87,7 +92,7 @@ class OwnerMemberApproveView(APIView):
             equb__owner=request.user
         )
 
-        member.status = "approved"
+        member.status = "active"
         member.save()
 
         AuditLog.objects.create(
@@ -111,7 +116,7 @@ class OwnerMemberRejectView(APIView):
             equb__owner=request.user
         )
 
-        member.status = "rejected"
+        member.status = "removed"
         member.save()
 
         AuditLog.objects.create(
@@ -157,7 +162,7 @@ class OwnerPaymentApproveView(APIView):
             equb_member__equb__owner=request.user
         )
 
-        payment.status = "approved"
+        payment.status = "completed"
         payment.approved_by = request.user
         payment.approved_at = timezone.now()
         payment.save()
@@ -169,7 +174,7 @@ class OwnerPaymentApproveView(APIView):
             meta={}
         )
 
-        return Response({"status": "approved"})
+        return Response({"status": "completed"})
 
 class OwnerPaymentRejectView(APIView):
 
@@ -481,3 +486,33 @@ class EqubActivityView(APIView):
 
         return Response(activity_logs)
     
+class EqubTypesView(generics.ListAPIView):
+    permission_classes = [IsEqubOwner]
+    
+    def get(self, request):
+        equb_types = EqubType.objects.all()
+        data = [
+            {
+                "id": et.id,
+                "name": et.name,
+                "description": et.description,
+            }
+            for et in equb_types
+        ]
+        return Response(data)
+    
+class EqubCategoriesView(generics.ListAPIView):
+    permission_classes = [IsEqubOwner]
+    
+    def get(self, request):
+        equb_categories = EqubCategory.objects.all()
+        data = [
+            {
+                "id": ec.id,
+                "name": ec.name,
+                "description": ec.description,
+                "image": request.build_absolute_uri(ec.image.url) if ec.image else None,
+            }
+            for ec in equb_categories
+        ]
+        return Response(data)

@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from equbApp.models import (
-    Equb, EqubMember, Payment, LotteryWinner 
+    Equb, EqubMember, Payment, LotteryWinner, EqubType, EqubCategory
 )
 from equbApp.serializers import EqubTypeSerializer, EqubCategorySerializer
 from owner_panel.models import LotteryRound
@@ -11,8 +11,21 @@ class OwnerEqubSerializer(serializers.ModelSerializer):
     pending_members = serializers.SerializerMethodField()
     pending_payments = serializers.SerializerMethodField()
 
-    equb_type = EqubTypeSerializer(read_only=True)
-    category = EqubCategorySerializer(read_only=True)
+    # WRITE (input)
+    category = serializers.PrimaryKeyRelatedField(
+        queryset=EqubCategory.objects.all(),
+        write_only=True
+    )
+    equb_type = serializers.PrimaryKeyRelatedField(
+        queryset=EqubType.objects.all(),
+        required=False,
+        allow_null=True,
+        write_only=True
+    )
+
+    # READ (output)
+    category_detail = EqubCategorySerializer(source="category", read_only=True)
+    equb_type_detail = EqubTypeSerializer(source="equb_type", read_only=True)
 
     class Meta:
         model = Equb

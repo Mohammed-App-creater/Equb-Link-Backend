@@ -72,88 +72,47 @@ class EqubAdminDataSerializer(serializers.ModelSerializer):
 
 
 
-# from rest_framework import serializers
-# from django.contrib.auth import get_user_model
+class ProfileUpdateSerializer(serializers.Serializer):
+    name = serializers.CharField(max_length=30, required=False)
+    phone = serializers.CharField(max_length=15, required=False)
+    email = serializers.EmailField(required=False)
 
-# User = get_user_model()
+    def validate_phone(self, value):
+        if User.objects.exclude(id=self.context["request"].user.id).filter(phone=value).exists():
+            raise serializers.ValidationError("Phone number already in use.")
+        return value
 
-# from .models import Student, Instructor, Admin, Department
+    def update(self, user, validated_data):
+        # Update user fields
+        user.phone = validated_data.get("phone", user.phone)
+        user.email = validated_data.get("email", user.email)
+        user.save()
 
+        # Update profile name (based on role)
+        profile = None
+        if hasattr(user, "admin"):
+            profile = user.admin
+        elif hasattr(user, "customer"):
+            profile = user.customer
+        elif hasattr(user, "equbadmin"):
+            profile = user.equbadmin
 
-# class UserSerializer(serializers.ModelSerializer):
-#     class Meta(object):
-#         model = User
-#         fields = ["id", "email", "is_admin", "is_instructor", "is_student"]
+        if profile and "name" in validated_data:
+            profile.name = validated_data["name"]
+            profile.save()
 
+        return user
 
-# class AdminSerializer(serializers.ModelSerializer):
-#     user = UserSerializer()
+# =========================
+# CHANGE PASSWORD SERIALIZER
+# =========================
 
-#     class Meta(object):
-#         model = Admin
-#         fields = ["id", "name", "phone", "photo", "user"]
+class ChangePasswordSerializer(serializers.Serializer):
+    old_password = serializers.CharField(required=True)
+    new_password = serializers.CharField(required=True, min_length=8)
+    confirm_password = serializers.CharField(required=True)
 
-# class AdminPostSerializer(serializers.ModelSerializer):
-#     user = serializers.PrimaryKeyRelatedField(
-#         read_only=False, queryset=User.objects.all()
-#     )
-
-#     class Meta(object):
-#         model = Admin
-#         fields = ["id", "name", "phone", "photo", "user"]
-
-
-# class DepartmentSerializer(serializers.ModelSerializer):
-#     class Meta(object):
-#         model = Department
-#         fields = ["id", "name"]
-
-
-# class DepartmentSerializer(serializers.ModelSerializer):
-#     class Meta(object):
-#         model = Department
-#         fields = ["id", "name"]
-
-
-# class StudentSerializer(serializers.ModelSerializer):
-#     user = serializers.PrimaryKeyRelatedField(
-#         read_only=False, queryset=User.objects.all()
-#     )
-#     department = serializers.PrimaryKeyRelatedField(
-#         allow_null=True, read_only=False, queryset=Department.objects.all()
-#     )
-
-#     class Meta(object):
-#         model = Student
-#         fields = ["id", "name", "phone", "photo", "user", "department", "stream"]
-
-
-# class StudentDataSerializer(serializers.ModelSerializer):
-#     user = UserSerializer()
-#     department = DepartmentSerializer()
-
-#     class Meta(object):
-#         model = Student
-#         fields = ["id", "name", "phone", "photo", "user", "department", "stream", "referral_code", "referred_by", "aff_code", "aff_percent", "aff_paid"]
-
-
-# class InstructorSerializer(serializers.ModelSerializer):
-#     user = serializers.PrimaryKeyRelatedField(
-#         read_only=False, queryset=User.objects.all()
-#     )
-#     department = serializers.PrimaryKeyRelatedField(
-#         allow_null=True, read_only=False, queryset=Department.objects.all()
-#     )
-
-#     class Meta(object):
-#         model = Instructor
-#         fields = ["id", "name", "phone", "photo", "user", "department", "stream"]
-
-
-# class InstructorDataSerializer(serializers.ModelSerializer):
-#     user = UserSerializer()
-#     department = DepartmentSerializer()
-
-#     class Meta(object):
-#         model = Instructor
-#         fields = ["id", "name", "phone", "photo", "user", "department", "stream", "earn_percent"]
+    def validate(self, attrs):
+        if attrs["new_password"] != attrs["confirm_password"]:
+            raise serializers.ValidationError("Passwords do not match.")
+        return attrs

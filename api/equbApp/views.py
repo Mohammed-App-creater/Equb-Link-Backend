@@ -103,6 +103,8 @@ def equb_type_detail_admin(request, id):
     elif request.method == "DELETE":
         instance.delete()
         return Response({"message": "Deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
+    
+
 
 
 # =========================== EqubCategory ===========================

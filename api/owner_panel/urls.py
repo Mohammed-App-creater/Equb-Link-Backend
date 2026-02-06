@@ -84,11 +84,27 @@ urlpatterns = [
         views.EqubReportSummaryView.as_view(),
         name='equb-report-summary'
     ),
+    
+    # Activity Logs
 
     path(
         'equbs/<uuid:equb_id>/activity/',
         views.EqubActivityView.as_view(),
         name='equb-activity'
+    ),
+    
+    # Equb Types
+    path(
+        'equbs/types/',
+        views.EqubTypesView.as_view(),
+        name='equb-types'
+    ),
+    
+    # Equb Categories
+    path(
+        'equbs/categories/',
+        views.EqubCategoriesView.as_view(),
+        name='equb-categories'
     ),
 
 ]

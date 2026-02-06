@@ -1,4 +1,5 @@
 from django.contrib.auth import get_user_model
+from rest_framework.views import APIView
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
@@ -10,6 +11,8 @@ from .serializers import (
     AdminSerializer,
     EqubAdminDataSerializer,
     AdminPostSerializer,
+    ProfileUpdateSerializer,
+    ChangePasswordSerializer,
 )
 import random
 from rest_framework.decorators import api_view, permission_classes
@@ -294,4 +297,85 @@ def loginWithToken(request):
     )
 
 
+# =========================
+# # UPDATE PROFILE (CUSTOMER, ADMIN, EQUB ADMIN)
+# ==========================
 
+class UpdateProfileView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def put(self, request):
+        serializer = ProfileUpdateSerializer(
+            instance=request.user,
+            data=request.data,
+            context={"request": request},
+            partial=True,
+        )
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response(
+                {"detail": "Profile updated successfully"},
+                status=status.HTTP_200_OK
+            )
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+class ChangePasswordView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        serializer = ChangePasswordSerializer(data=request.data)
+
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        user = request.user
+
+        if not user.check_password(serializer.validated_data["old_password"]):
+            return Response(
+                {"old_password": "Incorrect Old password"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        user.set_password(serializer.validated_data["new_password"])
+        user.save()
+
+        return Response(
+            {"detail": "Password changed successfully"},
+            status=status.HTTP_200_OK
+        )
+        
+        
+# =========================
+# GET CURRENT USER PROFILE
+# =========================
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def me(request):
+    user = request.user
+
+    if user.is_customer:
+        serializer = CustomerDataSerializer(
+            Customer.objects.get(user=user)
+        )
+    elif user.is_admin:
+        serializer = AdminSerializer(
+            Admin.objects.get(user=user)
+        )
+    elif user.is_equb_admin:
+        serializer = EqubAdminDataSerializer(
+            EqubAdmin.objects.get(user=user)
+        )
+    else:
+        serializer = UserSerializer(user)
+
+    return Response(
+        {
+            "message": "success",
+            "data": serializer.data,
+        },
+        status=status.HTTP_200_OK,
+    )
