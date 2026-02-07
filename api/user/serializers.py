@@ -73,22 +73,22 @@ class EqubAdminDataSerializer(serializers.ModelSerializer):
 
 
 class ProfileUpdateSerializer(serializers.Serializer):
-    name = serializers.CharField(max_length=30, required=False)
-    phone = serializers.CharField(max_length=15, required=False)
     email = serializers.EmailField(required=False)
+    photo = serializers.ImageField(required=False)
 
-    def validate_phone(self, value):
-        if User.objects.exclude(id=self.context["request"].user.id).filter(phone=value).exists():
-            raise serializers.ValidationError("Phone number already in use.")
+    def validate_email(self, value):
+        user = self.context["request"].user
+        if User.objects.exclude(id=user.id).filter(email=value).exists():
+            raise serializers.ValidationError("Email already in use.")
         return value
 
     def update(self, user, validated_data):
-        # Update user fields
-        user.phone = validated_data.get("phone", user.phone)
-        user.email = validated_data.get("email", user.email)
-        user.save()
+        # Update email
+        if "email" in validated_data:
+            user.email = validated_data["email"]
+            user.save()
 
-        # Update profile name (based on role)
+        # Resolve profile based on role
         profile = None
         if hasattr(user, "admin"):
             profile = user.admin
@@ -97,11 +97,13 @@ class ProfileUpdateSerializer(serializers.Serializer):
         elif hasattr(user, "equbadmin"):
             profile = user.equbadmin
 
-        if profile and "name" in validated_data:
-            profile.name = validated_data["name"]
+        # Update photo
+        if profile and "photo" in validated_data:
+            profile.photo = validated_data["photo"]
             profile.save()
 
         return user
+
 
 # =========================
 # CHANGE PASSWORD SERIALIZER

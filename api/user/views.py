@@ -320,6 +320,7 @@ class UpdateProfileView(APIView):
             )
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
     
 class ChangePasswordView(APIView):
     permission_classes = [IsAuthenticated]
