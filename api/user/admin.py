@@ -1,8 +1,18 @@
 from django.contrib import admin
+from django.contrib.auth import get_user_model
 
-from user.models import  EqubAdmin, Customer
+from user.models import EqubAdmin, Customer
+
+User = get_user_model()
 
 
+@admin.register(User)
+class AccountAdmin(admin.ModelAdmin):
+    """Enables autocomplete for Owner bank account → owner FK and similar."""
+
+    list_display = ("phone", "email", "is_equb_admin", "is_customer", "is_active")
+    search_fields = ("phone", "email")
+    list_filter = ("is_equb_admin", "is_customer", "is_active")
 
 
 class EqubAdminAdmin(admin.ModelAdmin):

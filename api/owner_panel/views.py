@@ -13,6 +13,7 @@ from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import generics
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -22,13 +23,15 @@ from rest_framework.views import APIView
 from .models import AuditLog
 from .permissions import IsEqubOwner
 from .serializers import (
+    OwnerBankAccountSerializer,
     OwnerEqubSerializer,
     OwnerMemberSerializer,
     OwnerPaymentSerializer,
     OwnerRoundSerializer,
 )
 
-from equbApp.models import Equb, EqubMember, EqubType, EqubCategory, Payment
+from equbApp.bank_constants import ETHIOPIAN_BANKS
+from equbApp.models import Equb, EqubMember, EqubType, EqubCategory, OwnerBankAccount, Payment
 from owner_panel.models import LotteryRound
 
 
@@ -38,7 +41,9 @@ class OwnerEqubListCreateView(generics.ListCreateAPIView):
     permission_classes = [IsEqubOwner]
 
     def get_queryset(self):
-        return Equb.objects.filter(owner=self.request.user)
+        return Equb.objects.filter(owner=self.request.user).prefetch_related(
+            "payout_bank_accounts",
+        )
 
     def perform_create(self, serializer):
         serializer.save(owner=self.request.user)
@@ -49,7 +54,9 @@ class OwnerEqubDetailView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [IsEqubOwner]
 
     def get_queryset(self):
-        return Equb.objects.filter(owner=self.request.user)
+        return Equb.objects.filter(owner=self.request.user).prefetch_related(
+            "payout_bank_accounts",
+        )
 
     def destroy(self, request, *args, **kwargs):
 
@@ -65,6 +72,71 @@ class OwnerEqubDetailView(generics.RetrieveUpdateDestroyAPIView):
             )
 
         return super().destroy(request, *args, **kwargs)
+
+
+class EthiopianBankListView(APIView):
+    """List predefined banks / wallets (code, name, logo_url) for owner payout setup."""
+
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        return Response({"banks": ETHIOPIAN_BANKS})
+
+
+class OwnerBankAccountListCreateView(generics.ListCreateAPIView):
+    """List or create bank accounts for the logged-in equb owner (multiple allowed)."""
+
+    serializer_class = OwnerBankAccountSerializer
+    permission_classes = [IsEqubOwner]
+
+    def get_queryset(self):
+        return OwnerBankAccount.objects.filter(owner=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(owner=self.request.user)
+
+
+class OwnerBankAccountDetailView(generics.RetrieveUpdateDestroyAPIView):
+    """Retrieve, update, or delete one of the owner's bank accounts."""
+
+    serializer_class = OwnerBankAccountSerializer
+    permission_classes = [IsEqubOwner]
+
+    def get_queryset(self):
+        return OwnerBankAccount.objects.filter(owner=self.request.user)
+
+
+class OwnerEqubBankingView(APIView):
+    """
+    Owner screen for one equb: selected payout account + all saved accounts.
+    Each account includes linked_equbs (equbs that use it as payout).
+    """
+
+    permission_classes = [IsEqubOwner]
+
+    def get(self, request, equb_id):
+        equb = get_object_or_404(
+            Equb.objects.prefetch_related("payout_bank_accounts"),
+            id=equb_id,
+            owner=request.user,
+        )
+        accounts = OwnerBankAccount.objects.filter(owner=request.user).order_by(
+            "-created_at"
+        )
+        ser_ctx = {"request": request}
+        return Response(
+            {
+                "equb_id": str(equb.id),
+                "equb_name": equb.name,
+                "payout_bank_accounts": OwnerBankAccountSerializer(
+                    equb.payout_bank_accounts.all(), many=True, context=ser_ctx
+                ).data,
+                "owner_bank_accounts": OwnerBankAccountSerializer(
+                    accounts, many=True, context=ser_ctx
+                ).data,
+            }
+        )
+
 
 class OwnerMemberListView(generics.ListAPIView):
 

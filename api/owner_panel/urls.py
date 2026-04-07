@@ -3,8 +3,32 @@ from . import views
 
 urlpatterns = [
 
+    # Banks / wallets (picker list)
+    path(
+        "banks/",
+        views.EthiopianBankListView.as_view(),
+        name="owner-banks-list",
+    ),
+
+    path(
+        "bank-accounts/",
+        views.OwnerBankAccountListCreateView.as_view(),
+        name="owner-bank-accounts-list-create",
+    ),
+    path(
+        "bank-accounts/<uuid:pk>/",
+        views.OwnerBankAccountDetailView.as_view(),
+        name="owner-bank-account-detail",
+    ),
+
     # Equbs
     path("equbs/", views.OwnerEqubListCreateView.as_view(), name="owner-equb-list-create"),
+
+    path(
+        "equbs/<uuid:equb_id>/banking/",
+        views.OwnerEqubBankingView.as_view(),
+        name="owner-equb-banking",
+    ),
     
     path("equbs/<uuid:pk>/", views.OwnerEqubDetailView.as_view(), name="owner-equb-detail"),
 

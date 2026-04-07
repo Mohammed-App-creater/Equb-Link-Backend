@@ -49,6 +49,41 @@ class EqubCategory(models.Model):
         return self.name
 
 
+# ===========================
+# OWNER BANK ACCOUNTS (multiple per owner; same or different banks)
+# ===========================
+class OwnerBankAccount(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    owner = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="owner_bank_accounts",
+    )
+    bank_code = models.CharField(
+        max_length=10,
+        help_text="Code from predefined bank list (e.g. CBE, TBR)",
+    )
+    account_number = models.CharField(max_length=64)
+    account_holder_name = models.CharField(max_length=255)
+    label = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text="Optional label to distinguish accounts (e.g. Personal, Business)",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["owner", "bank_code", "account_number"],
+                name="equbapp_ownerbankaccount_owner_bank_acct_unique",
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.owner_id} {self.bank_code} …{self.account_number[-4:]}"
 
 
 # ===========================
@@ -116,6 +151,14 @@ class Equb(models.Model):
             ("cancelled", "Cancelled"),
         ],
         default="draft",
+    )
+
+    # Owner's saved accounts members can pay to for this equb (optional; can list several)
+    payout_bank_accounts = models.ManyToManyField(
+        OwnerBankAccount,
+        related_name="equbs_payout",
+        blank=True,
+        help_text="All must belong to this equb's owner.",
     )
 
     created_at = models.DateTimeField(auto_now_add=True)

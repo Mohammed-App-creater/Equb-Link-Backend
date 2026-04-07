@@ -1,11 +1,14 @@
+from django import forms
 from django.contrib import admin
 from django.utils.html import format_html
 from django.db.models import Sum, Q
+from .bank_constants import ETHIOPIAN_BANKS
 from .models import (
     EqubType,
     EqubCategory,
     Equb,
     EqubMember,
+    OwnerBankAccount,
     Payment,
     LotteryWinner,
     Notification,
@@ -72,17 +75,102 @@ class EqubMemberInline(admin.TabularInline):
     show_change_link = True
 
 
+class EqubAdminForm(forms.ModelForm):
+    class Meta:
+        model = Equb
+        fields = "__all__"
+
+    def clean(self):
+        cleaned_data = super().clean()
+        owner = cleaned_data.get("owner")
+        accounts = cleaned_data.get("payout_bank_accounts")
+        if owner and accounts is not None:
+            for a in accounts:
+                if a.owner_id != owner.id:
+                    raise forms.ValidationError(
+                        {
+                            "payout_bank_accounts": (
+                                "Every selected account must belong to the equb owner."
+                            )
+                        }
+                    )
+        return cleaned_data
+
+
+class OwnerBankAccountAdminForm(forms.ModelForm):
+    class Meta:
+        model = OwnerBankAccount
+        fields = "__all__"
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        choices = [("", "---------")] + [
+            (b["code"], f"{b['name']} ({b['code']})") for b in ETHIOPIAN_BANKS
+        ]
+        self.fields["bank_code"].widget = forms.Select(choices=choices)
+
+
+# ===========================
+# Owner bank accounts
+# ===========================
+@admin.register(OwnerBankAccount)
+class OwnerBankAccountAdmin(admin.ModelAdmin):
+    form = OwnerBankAccountAdminForm
+    list_display = (
+        "owner",
+        "bank_code",
+        "account_short",
+        "account_holder_name",
+        "label",
+        "created_at",
+    )
+    list_filter = ("bank_code",)
+    search_fields = (
+        "account_number",
+        "account_holder_name",
+        "label",
+        "owner__phone",
+        "owner__email",
+    )
+    raw_id_fields = ("owner",)
+    ordering = ("-created_at",)
+    list_select_related = ("owner",)
+    readonly_fields = ("created_at", "updated_at")
+
+    @admin.display(description="Account #")
+    def account_short(self, obj):
+        n = obj.account_number
+        if len(n) <= 6:
+            return n
+        return f"…{n[-4:]}"
+
+
 # ===========================
 # EQUb Admin
 # ===========================
 @admin.register(Equb)
 class EqubAdmin(admin.ModelAdmin):
+    form = EqubAdminForm
+    filter_horizontal = ("payout_bank_accounts",)
+
+    def formfield_for_manytomany(self, db_field, request, **kwargs):
+        if db_field.name == "payout_bank_accounts":
+            obj = kwargs.get("obj")
+            if obj and getattr(obj, "owner_id", None):
+                kwargs["queryset"] = OwnerBankAccount.objects.filter(
+                    owner_id=obj.owner_id
+                ).order_by("bank_code", "-created_at")
+            else:
+                kwargs["queryset"] = OwnerBankAccount.objects.none()
+        return super().formfield_for_manytomany(db_field, request, **kwargs)
+
     list_display = (
         "name",
         "owner",
         "category",
         "equb_type",
         "status",
+        "payout_account_summary",
         "total_members",
         "contribution_amount",
         "total_payout",
@@ -103,7 +191,10 @@ class EqubAdmin(admin.ModelAdmin):
 
     search_fields = (
         "name",
-        "owner__name",
+        "owner__phone",
+        "owner__email",
+        "owner__customer__name",
+        "owner__equbadmin__name",
         "category__name",
         "equb_type__name",
     )
@@ -130,6 +221,10 @@ class EqubAdmin(admin.ModelAdmin):
                 "payout_system",
             )
         }),
+        ("Payout bank accounts for this equb", {
+            "fields": ("payout_bank_accounts",),
+            "description": "Optional. Members can pay into any of these; all must belong to the owner.",
+        }),
         ("Schedule & Rules", {
             "fields": (
                 "start_date",
@@ -145,6 +240,20 @@ class EqubAdmin(admin.ModelAdmin):
     )
 
     actions = ["approve_rules", "mark_completed"]
+
+    @admin.display(description="Payout accounts")
+    def payout_account_summary(self, obj):
+        qs = list(obj.payout_bank_accounts.all()[:4])
+        if not qs:
+            return "—"
+        parts = []
+        for acc in qs:
+            tail = acc.account_number[-4:] if len(acc.account_number) >= 4 else acc.account_number
+            parts.append(f"{acc.bank_code} …{tail}")
+        n = obj.payout_bank_accounts.count()
+        if n > 4:
+            parts.append(f"+{n - 4} more")
+        return ", ".join(parts)
 
     def approve_rules(self, request, queryset):
         updated = queryset.update(rules_approved=True)
@@ -172,7 +281,12 @@ class EqubMemberAdmin(admin.ModelAdmin):
         "has_received_payout",
         "joined_at",
     )
-    search_fields = ("user__name", "equb__name")
+    search_fields = (
+        "user__phone",
+        "user__customer__name",
+        "user__equbadmin__name",
+        "equb__name",
+    )
     list_filter = ("status", "payment_status", "has_received_payout")
     readonly_fields = ("joined_at", "updated_at")
 
