@@ -30,7 +30,7 @@ class IsEqubAdminUser(BasePermission):
     Allows access only to Equb admin users.
     """
     def has_permission(self, request, view):
-        is_equbadminuser = request.user and request.user.is_equbadmin
+        is_equbadminuser = request.user and request.user.is_equb_admin
         if not is_equbadminuser and request.user:
             # Your ban logic goes here
             pass
@@ -42,7 +42,7 @@ class IsEqubAdminOrIsCustomerUser(BasePermission):
     Allows access only to Equb admin or customer users.
     """
     def has_permission(self, request, view):
-        is_equbadminuser = request.user and request.user.is_equbadmin
+        is_equbadminuser = request.user and request.user.is_equb_admin
         is_customeruser = request.user and request.user.is_customer
         if not is_equbadminuser and not is_customeruser:
             # Your ban logic goes here
@@ -55,7 +55,7 @@ class IsEqubAdminOrIsAdminUser(BasePermission):
     Allows access only to Equb admin and admin users.
     """
     def has_permission(self, request, view):
-        is_equbadminuser = request.user and request.user.is_equbadmin
+        is_equbadminuser = request.user and request.user.is_equb_admin
         is_adminuser = request.user and request.user.is_admin
         if not is_equbadminuser and not is_adminuser:
             # Your ban logic goes here
