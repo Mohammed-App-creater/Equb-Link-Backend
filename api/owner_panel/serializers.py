@@ -109,7 +109,7 @@ class OwnerEqubSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Equb
-        exclude = ["owner", "payout_bank_accounts"]
+        exclude = ["owner"]
 
     def create(self, validated_data):
         ids = validated_data.pop("payout_bank_account_ids", None)
