@@ -985,11 +985,15 @@ def _get_chapa_user_names(user):
 
 def _get_chapa_email(user):
     """Get email for Chapa; fallback to phone-based if missing."""
-    email = (user.email or "").strip() or None
-    if not email:
-        safe_phone = (user.phone or "").replace("+", "").replace(" ", "").strip()
-        email = f"{safe_phone}@equb.app"
-    return email
+    import re
+    EMAIL_RE = re.compile(
+        r'^[a-zA-Z][a-zA-Z0-9._%+-]*@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    )
+    email = (user.email or "").strip()
+    if email and EMAIL_RE.match(email):
+        return email
+    safe_phone = (user.phone or "").replace("+","").replace(" ","").strip()
+    return f"user{safe_phone}@gmail.com"
 
 
 @api_view(["POST"])
@@ -1240,11 +1244,7 @@ def pay_equb_contribution_chapa(request, equb_id):
             timeout=10
         )
         data = response.json()
-        
-            # ✅ Add these two lines to see the real error
-        print("Chapa status code:", response.status_code)
-        print("Chapa response:", data)
-        
+
     except requests.RequestException:
         payment.delete()
         return Response(
@@ -1255,8 +1255,6 @@ def pay_equb_contribution_chapa(request, equb_id):
     # Step 11: Handle response
     if not response.ok or data.get("status") != "success":
         payment.delete()
-        print("Chapa status code:", response.status_code)
-        print("Chapa response:", data)
         return Response(
             {"message": data.get("message", "Chapa payment initialization failed.")},
             status=status.HTTP_400_BAD_REQUEST
@@ -1621,7 +1619,7 @@ def join_equb_chapa(request, equb_id):
         )
 
     if not response.ok or data.get("status") != "success":
-        
+
         payment.delete()
         membership.delete()
         return Response(

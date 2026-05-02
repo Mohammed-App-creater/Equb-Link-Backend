@@ -108,6 +108,7 @@ def signup(request):
 @api_view(["POST"])
 @permission_classes([AllowAny])
 def customer_signup(request):
+    print("SIGNUP DATA:", request.data)
     data = request.data
 
     phone = data.get("phone")
@@ -305,6 +306,7 @@ class UpdateProfileView(APIView):
     permission_classes = [IsAuthenticated]
 
     def put(self, request):
+        print("PROFILE DATA:", request.data)
         serializer = ProfileUpdateSerializer(
             instance=request.user,
             data=request.data,
