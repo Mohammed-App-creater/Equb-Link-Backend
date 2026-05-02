@@ -12,7 +12,7 @@ sys.path.insert(0, os.path.join(BASE_DIR, "api"))
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-5(nkagkgpr0iowx%ghx8r5a!%_viw#()hs#gnbc6mrd^vd4h2b"
+SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -217,5 +217,5 @@ TEMPLATES = [
 # ]
 
 
-CHAPA_SECRET_KEY = "CHASECK_TEST-cQcHMEZDMtPjb7DPgNSBRadb90SPxj4J"
-CHAPA_BASE_URL = "CHAPUBK_TEST-u7Pgq7cPo1coU9m3F71olZ5aUps3TLlc"
+CHAPA_SECRET_KEY = os.environ.get("CHAPA_SECRET_KEY", "")
+# CHAPA_BASE_URL removed — was unused (actual API host is hardcoded at call sites)

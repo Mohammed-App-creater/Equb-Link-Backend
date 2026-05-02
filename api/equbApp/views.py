@@ -1,5 +1,7 @@
 # views.py
 from django.utils import timezone
+import hashlib
+import hmac
 import uuid
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
@@ -1648,6 +1650,17 @@ def join_equb_chapa(request, equb_id):
 
 @api_view(["GET", "POST"])
 def chapa_callback(request):
+    # Verify HMAC signature on POST webhooks (GET return_url has no signature)
+    if request.method == "POST":
+        signature = request.META.get("HTTP_CHAPA_SIGNATURE", "")
+        expected = hmac.new(
+            settings.CHAPA_SECRET_KEY.encode(),
+            request.body,
+            hashlib.sha256
+        ).hexdigest()
+        if not hmac.compare_digest(expected, signature):
+            return Response({"error": "Invalid signature"}, status=400)
+
     tx_ref = request.GET.get("trx_ref") or request.data.get("trx_ref")
 
     if not tx_ref:
@@ -1658,16 +1671,23 @@ def chapa_callback(request):
     except Payment.DoesNotExist:
         return Response({"error": "Payment not found"}, status=404)
 
+    # Idempotency: skip if already completed
+    if payment.status == "completed":
+        return Response({"status": "already completed"}, status=200)
+
     # Verify with Chapa
     headers = {
         "Authorization": f"Bearer {settings.CHAPA_SECRET_KEY}"
     }
 
-    response = requests.get(
-        f"https://api.chapa.co/v1/transaction/verify/{tx_ref}",
-        headers=headers,
-        timeout=10
-    )
+    try:
+        response = requests.get(
+            f"https://api.chapa.co/v1/transaction/verify/{tx_ref}",
+            headers=headers,
+            timeout=10
+        )
+    except requests.RequestException:
+        return Response({"error": "Chapa verification failed"}, status=502)
 
     data = response.json()
 

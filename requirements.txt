@@ -20,5 +20,6 @@ wagtail
 django-jazzmin
 django-admin-interface
 django-colorfield
+python-dotenv
 
 
