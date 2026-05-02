@@ -222,6 +222,7 @@ class Payment(models.Model):
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     payment_method = models.CharField(max_length=50)
     transaction_id = models.CharField(max_length=100)
+    chapa_checkout_url = models.URLField(max_length=500, null=True, blank=True)
     paid_at = models.DateTimeField(null=True, blank=True)
     receipt_image = models.ImageField(
         upload_to="receipt_images/", null=True, blank=True
