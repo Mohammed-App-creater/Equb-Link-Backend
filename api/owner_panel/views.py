@@ -31,7 +31,7 @@ from .serializers import (
 )
 
 from equbApp.bank_constants import ETHIOPIAN_BANKS
-from equbApp.models import Equb, EqubMember, EqubType, EqubCategory, OwnerBankAccount, Payment
+from equbApp.models import Equb, EqubMember, EqubType, EqubCategory, LotteryWinner, OwnerBankAccount, Payment
 from owner_panel.models import LotteryRound
 
 
@@ -357,14 +357,14 @@ class OwnerDrawView(APIView):
 
         members = EqubMember.objects.filter(
             equb=equb,
-            status="approved"
+            status="active"
         )
 
         # All paid?
         for m in members:
             if not Payment.objects.filter(
                 equb_member=m,
-                status="approved",
+                status="completed",
                 round_number=round
             ).exists():
                 return Response(
@@ -394,13 +394,23 @@ class OwnerDrawView(APIView):
 
         round_obj, _ = LotteryRound.objects.get_or_create(
             equb=equb,
-            round=round
+            round=round,
+            defaults={"seed": seed}
         )
 
         round_obj.winner = winner.user
         round_obj.seed = seed
         round_obj.drawn_at = timezone.now()
         round_obj.save()
+
+        LotteryWinner.objects.update_or_create(
+            equb=equb,
+            round_number=round,
+            defaults={
+                "winner": winner,
+                "draw_date": timezone.now(),
+            }
+        )
 
         winner.has_received_payout = True
         winner.save()
