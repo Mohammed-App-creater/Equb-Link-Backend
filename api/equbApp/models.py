@@ -1,6 +1,8 @@
 import uuid
 from django.db import models
 from user.models import User
+from django.shortcuts import get_object_or_404
+from django.conf import settings
 
 
 # ===========================
@@ -47,6 +49,41 @@ class EqubCategory(models.Model):
         return self.name
 
 
+# ===========================
+# OWNER BANK ACCOUNTS (multiple per owner; same or different banks)
+# ===========================
+class OwnerBankAccount(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    owner = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="owner_bank_accounts",
+    )
+    bank_code = models.CharField(
+        max_length=10,
+        help_text="Code from predefined bank list (e.g. CBE, TBR)",
+    )
+    account_number = models.CharField(max_length=64)
+    account_holder_name = models.CharField(max_length=255)
+    label = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text="Optional label to distinguish accounts (e.g. Personal, Business)",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["owner", "bank_code", "account_number"],
+                name="equbapp_ownerbankaccount_owner_bank_acct_unique",
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.owner_id} {self.bank_code} …{self.account_number[-4:]}"
 
 
 # ===========================
@@ -116,6 +153,14 @@ class Equb(models.Model):
         default="draft",
     )
 
+    # Owner's saved accounts members can pay to for this equb (optional; can list several)
+    payout_bank_accounts = models.ManyToManyField(
+        OwnerBankAccount,
+        related_name="equbs_payout",
+        blank=True,
+        help_text="All must belong to this equb's owner.",
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -177,15 +222,25 @@ class Payment(models.Model):
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     payment_method = models.CharField(max_length=50)
     transaction_id = models.CharField(max_length=100)
+    chapa_checkout_url = models.URLField(max_length=500, null=True, blank=True)
     paid_at = models.DateTimeField(null=True, blank=True)
     receipt_image = models.ImageField(
         upload_to="receipt_images/", null=True, blank=True
     )
     status = models.CharField(
         max_length=20,
-        choices=[("pending", "Pending"), ("completed", "Completed")],
+        choices=[("pending", "Pending"), ("completed", "Completed"), ("rejected", "Rejected")],
         default="pending",
     )
+    approved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="approved_payments"
+    )
+    approved_at = models.DateTimeField(null=True, blank=True)
+    rejected_reason = models.TextField(blank=True, null=True)
     round_number = models.PositiveIntegerField(default=1)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -204,9 +259,6 @@ class Payment(models.Model):
         else:
             name = user.phone  # fallback if no profile
         return f"Payment {self.transaction_id} for {name}"
-
-
-
 # ===========================
 # LOTTERY WINNER
 # ===========================
@@ -249,7 +301,18 @@ class Notification(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"Notification for {self.user.name}"
+        # Try fetching the related profile name
+        if hasattr(self.user, "admin"):
+            name = self.user.admin.name
+        elif hasattr(self.user, "customer"):
+            name = self.user.customer.name
+        elif hasattr(self.user, "equbadmin"):
+            name = self.user.equbadmin.name
+        else:
+            name = self.user.phone  # fallback
+
+        return f"Notification for {name}"
+
 
 
 # ===========================

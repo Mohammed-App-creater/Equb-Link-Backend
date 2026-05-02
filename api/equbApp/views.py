@@ -1,10 +1,15 @@
 # views.py
+from django.utils import timezone
 import uuid
 from django.shortcuts import get_object_or_404
+from django.urls import reverse
+import requests
+from django.shortcuts import render
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework.response import Response
 from rest_framework import status
+from django.conf import settings
 
 from .models import (
     EqubType,
@@ -21,10 +26,12 @@ from .serializers import (
     EqubCategorySerializer,
     EqubSerializer,
     EqubMemberSerializer,
+    OwnerBankAccountPublicSerializer,
     PaymentSerializer,
     LotteryWinnerSerializer,
     NotificationSerializer,
-    SupportTicketSerializer,EqubCategoryWithCountSerializer,
+    SupportTicketSerializer,
+    EqubCategoryWithCountSerializer,
 )
 from .pagination import StandardResultsSetPagination
 from rest_framework.pagination import PageNumberPagination
@@ -103,6 +110,8 @@ def equb_type_detail_admin(request, id):
     elif request.method == "DELETE":
         instance.delete()
         return Response({"message": "Deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
+    
+
 
 
 # =========================== EqubCategory ===========================
@@ -554,12 +563,6 @@ def get_active_equbs_by_type_id(request, equb_type_id):
         'equbs': page
     })
     
-    
-    
-    
-    
-    
-
 # API: List all members in a specific Equb
 
 @api_view(["GET"])
@@ -897,7 +900,9 @@ def customer_dashboard(request):
     user = request.user
 
     #  All Equbs the user joined
-    equb_memberships = EqubMember.objects.filter(user=user).select_related('equb')
+    equb_memberships = EqubMember.objects.filter(user=user).select_related("equb").prefetch_related(
+        "equb__payout_bank_accounts",
+    )
 
     equbs_data = []
 
@@ -915,10 +920,15 @@ def customer_dashboard(request):
         winnings = LotteryWinner.objects.filter(equb=equb, winner=membership)
         winnings_data = LotteryWinnerSerializer(winnings, many=True).data
 
+        payout_list = OwnerBankAccountPublicSerializer(
+            equb.payout_bank_accounts.all(), many=True
+        ).data
+
         equbs_data.append({
             "equb_id": equb.id,
             "equb_name": equb.name,
             "status": equb.status,
+            "payout_bank_accounts": payout_list,
             "total_contribution": total_contribution,
             "payment_history": payments_data,
             "winnings": winnings_data,
@@ -954,33 +964,154 @@ def get_next_unpaid_round(member):
 
 # API: Pay Equb Contribution for Current Round
 
+def _get_chapa_user_names(user):
+    """Get first_name and last_name for Chapa from user profile. Safe fallbacks."""
+    full_name = None
+    if hasattr(user, "customer") and user.customer:
+        full_name = user.customer.name
+    elif hasattr(user, "admin") and user.admin:
+        full_name = user.admin.name
+    elif hasattr(user, "equbadmin") and user.equbadmin:
+        full_name = user.equbadmin.name
+    if not full_name:
+        full_name = user.phone or "Member"
+    name_parts = str(full_name).strip().split(None, 1)
+    first = name_parts[0] if name_parts else "Equb"
+    last = name_parts[1] if len(name_parts) > 1 else "Member"
+    return first, last
+
+
+def _get_chapa_email(user):
+    """Get email for Chapa; fallback to phone-based if missing."""
+    email = (user.email or "").strip() or None
+    if not email:
+        safe_phone = (user.phone or "").replace("+", "").replace(" ", "").strip()
+        email = f"{safe_phone}@equb.app"
+    return email
+
+
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def pay_equb_contribution(request, equb_id):
+    """
+    Pay Equb contribution for the next unpaid round.
+    Supports:
+    - payment_method == "chapa": online Chapa flow; no transaction_id/receipt_image.
+    - other methods: manual receipt; requires transaction_id and receipt_image.
+    """
     user = request.user
 
     equb = get_object_or_404(Equb, id=equb_id, status="active")
     member = get_object_or_404(EqubMember, user=user, equb=equb, status="active")
 
-    current_round = get_current_round(equb)
     next_round = get_next_unpaid_round(member)
-
     if not next_round:
         return Response({
             "message": "All contributions are already paid."
         }, status=status.HTTP_400_BAD_REQUEST)
 
-    # Validate request
-    payment_method = request.data.get("payment_method")
-    transaction_id = request.data.get("transaction_id")
-    receipt_image = request.FILES.get("receipt_image")
-
-    if not all([payment_method, transaction_id, receipt_image]):
+    # Prevent duplicate payment for same round
+    if Payment.objects.filter(equb_member=member, round_number=next_round).exists():
         return Response({
-            "message": "payment_method, transaction_id, and receipt_image are required."
+            "message": "A payment for this round has already been submitted."
         }, status=status.HTTP_400_BAD_REQUEST)
 
-    # Create payment
+    payment_method = (request.data.get("payment_method") or "").strip().lower()
+
+    if payment_method == "chapa":
+        # --- Chapa flow: no transaction_id or receipt_image ---
+        tx_ref = f"equb-{uuid.uuid4()}"
+        amount = equb.contribution_amount
+
+        payment = Payment.objects.create(
+            equb_member=member,
+            amount=amount,
+            transaction_id=tx_ref,
+            round_number=next_round,
+            status="pending",
+            payment_method="chapa"
+        )
+
+        first_name, last_name = _get_chapa_user_names(user)
+        email = _get_chapa_email(user)
+        callback_url = request.build_absolute_uri(reverse("chapa-callback"))
+        return_url = request.build_absolute_uri("/payment-success/")
+
+        payload = {
+            "amount": str(amount),
+            "currency": "ETB",
+            "email": email,
+            "first_name": first_name,
+            "last_name": last_name,
+            "tx_ref": tx_ref,
+            "callback_url": callback_url,
+            "return_url": return_url
+        }
+        headers = {"Authorization": f"Bearer {settings.CHAPA_SECRET_KEY}"}
+
+        try:
+            response = requests.post(
+                "https://api.chapa.co/v1/transaction/initialize",
+                json=payload,
+                headers=headers,
+                timeout=10
+            )
+            data = response.json()
+        except requests.RequestException:
+            payment.delete()
+            return Response({
+                "message": "Payment initialization failed. Please try again."
+            }, status=status.HTTP_502_BAD_GATEWAY)
+
+        if not response.ok or data.get("status") != "success":
+            payment.delete()
+            return Response({
+                "message": data.get("message", "Chapa payment initialization failed.")
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        checkout_url = (data.get("data") or {}).get("checkout_url", "")
+        if not checkout_url:
+            payment.delete()
+            return Response({
+                "message": "Invalid response from payment provider."
+            }, status=status.HTTP_502_BAD_GATEWAY)
+
+        Notification.objects.create(
+            user=user,
+            notif_type="payment_submitted",
+            message=(
+                f"Your Chapa payment for {equb.name} (Round {next_round}) has been initiated. "
+                f"Complete payment at the checkout link."
+            )
+        )
+        notify_admins(
+            message=(
+                f"Chapa payment initiated by {user.phone} "
+                f"for Equb: {equb.name} (Round {next_round})"
+            ),
+            notif_type="payment_submitted"
+        )
+
+        return Response({
+            "message": "Redirect user to checkout_url to complete payment.",
+            "checkout_url": checkout_url,
+            "tx_ref": tx_ref,
+            "amount": float(amount),
+            "round": next_round
+        }, status=status.HTTP_201_CREATED)
+
+    # --- Manual receipt flow ---
+    transaction_id = request.data.get("transaction_id")
+    receipt_image = request.FILES.get("receipt_image")
+    if not payment_method:
+        return Response({
+            "message": "payment_method is required."
+        }, status=status.HTTP_400_BAD_REQUEST)
+    if not transaction_id or not receipt_image:
+        return Response({
+            "message": "transaction_id and receipt_image are required for non-Chapa payments."
+        }, status=status.HTTP_400_BAD_REQUEST)
+
     Payment.objects.create(
         equb_member=member,
         amount=equb.contribution_amount,
@@ -990,7 +1121,7 @@ def pay_equb_contribution(request, equb_id):
         round_number=next_round,
         status="pending"
     )
-    
+
     Notification.objects.create(
         user=user,
         notif_type="payment_submitted",
@@ -999,17 +1130,13 @@ def pay_equb_contribution(request, equb_id):
             f"(Round {next_round}) has been submitted and is pending admin approval."
         )
     )
-    
-    # Notify admins
     notify_admins(
         message=(
             f"New payment submitted by {user.phone} "
-            f"for Equb: {equb.name} "
-            f"(Round {next_round})"
+            f"for Equb: {equb.name} (Round {next_round})"
         ),
         notif_type="payment_submitted"
     )
-
 
     return Response({
         "message": f"Payment submitted for round {next_round}. Awaiting approval.",
@@ -1017,9 +1144,140 @@ def pay_equb_contribution(request, equb_id):
         "amount": equb.contribution_amount
     }, status=status.HTTP_201_CREATED)
 
-    
-    # Admin API: Approve or Reject Payment
-    
+
+# API: Pay Equb Contribution via Chapa (dedicated endpoint)
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def pay_equb_contribution_chapa(request, equb_id):
+    """
+    Pay next unpaid round via Chapa. No transaction_id or receipt_image required.
+    Returns checkout_url for redirect; Chapa callback updates payment status.
+    """
+    # Step 1: Get user
+    user = request.user
+
+    # Step 2: Get active Equb
+    equb = get_object_or_404(Equb, id=equb_id, status="active")
+
+    # Step 3: Verify membership
+    member = get_object_or_404(EqubMember, user=user, equb=equb, status="active")
+
+    # Step 4: Get next unpaid round
+    next_round = get_next_unpaid_round(member)
+    if not next_round:
+        return Response(
+            {"message": "All contributions are already paid."},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    # Step 5: Prevent duplicate payment (pending or completed for this round)
+    if Payment.objects.filter(
+        equb_member=member,
+        round_number=next_round,
+        status__in=["pending", "completed"]
+    ).exists():
+        return Response(
+            {"message": "Payment already initiated for this round."},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    # Step 6: Generate Chapa transaction reference (Chapa max 50 chars)
+    tx_ref = f"equb-contribution-{uuid.uuid4().hex}"
+
+    # Step 7: Create pending Payment
+    payment = Payment.objects.create(
+        equb_member=member,
+        amount=equb.contribution_amount,
+        payment_method="chapa",
+        transaction_id=tx_ref,
+        round_number=next_round,
+        status="pending"
+    )
+
+    # Step 8: Prepare user info for Chapa
+    full_name = None
+    if hasattr(user, "customer") and user.customer:
+        full_name = user.customer.name
+    elif hasattr(user, "admin") and user.admin:
+        full_name = user.admin.name
+    elif hasattr(user, "equbadmin") and user.equbadmin:
+        full_name = user.equbadmin.name
+    else:
+        full_name = user.phone
+
+    name_parts = str(full_name or "").strip().split(None, 1)
+    first_name = name_parts[0] if name_parts else "Equb"
+    last_name = name_parts[1] if len(name_parts) > 1 else "Member"
+
+   # Step 9: Build Chapa payload
+    payload = {
+        "amount": str(equb.contribution_amount),
+        "currency": "ETB",
+        "first_name": first_name,
+        "last_name": last_name,
+        "tx_ref": tx_ref,
+        "callback_url": request.build_absolute_uri(reverse("chapa-callback")),
+        "return_url": request.build_absolute_uri("/payment-success/")
+    }
+
+    # Only add email if user actually has a real one
+    if user.email:
+        payload["email"] = user.email
+
+    # ✅ This line was missing
+    headers = {
+        "Authorization": f"Bearer {settings.CHAPA_SECRET_KEY}"
+    }
+
+    # Step 10: Call Chapa API
+    try:
+        response = requests.post(
+            "https://api.chapa.co/v1/transaction/initialize",
+            json=payload,
+            headers=headers,
+            timeout=10
+        )
+        data = response.json()
+        
+            # ✅ Add these two lines to see the real error
+        print("Chapa status code:", response.status_code)
+        print("Chapa response:", data)
+        
+    except requests.RequestException:
+        payment.delete()
+        return Response(
+            {"message": "Payment initialization failed. Please try again."},
+            status=status.HTTP_502_BAD_GATEWAY
+        )
+
+    # Step 11: Handle response
+    if not response.ok or data.get("status") != "success":
+        payment.delete()
+        print("Chapa status code:", response.status_code)
+        print("Chapa response:", data)
+        return Response(
+            {"message": data.get("message", "Chapa payment initialization failed.")},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    checkout_url = (data.get("data") or {}).get("checkout_url", "")
+    if not checkout_url:
+        payment.delete()
+        return Response(
+            {"message": "Invalid response from payment provider."},
+            status=status.HTTP_502_BAD_GATEWAY
+        )
+
+    return Response({
+        "message": "Redirect user to checkout_url",
+        "checkout_url": checkout_url,
+        "tx_ref": tx_ref,
+        "amount": equb.contribution_amount,
+        "round": next_round
+    }, status=status.HTTP_201_CREATED)
+
+
+# Admin API: Approve or Reject Payment
 @api_view(["POST"])
 @permission_classes([IsAuthenticated, IsAdminUser])
 def admin_approve_payment(request, payment_id):
@@ -1086,7 +1344,10 @@ def equb_detail(request, id):
     - Winners
     - Round progress
     """
-    equb = get_object_or_404(Equb, id=id)
+    equb = get_object_or_404(
+        Equb.objects.prefetch_related("payout_bank_accounts"),
+        id=id,
+    )
     
     # Serialize basic info
     data = EqubSerializer(equb).data
@@ -1116,6 +1377,10 @@ def equb_detail(request, id):
         "data": data,
         "message": "Equb details fetched successfully"
     })
+
+# Payment success page (for Chapa return_url)
+def payment_success(request):
+    return render(request, "payment_success.html")
 
 
 # =========================== Customer Notifications ===========================
@@ -1152,3 +1417,268 @@ def mark_notification_as_read(request):
     })
 
  
+ 
+#  =========================== Chapa payment ===========================
+ 
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def initialize_chapa_payment(request):
+    equb_member_id = request.data.get("equb_member")
+    amount = request.data.get("amount")
+    round_number = request.data.get("round_number")
+
+    tx_ref = f"equb-{uuid.uuid4()}"
+
+    payment = Payment.objects.create(
+        equb_member_id=equb_member_id,
+        amount=amount,
+        transaction_id=tx_ref,
+        round_number=round_number,
+        status="pending",
+        payment_method="chapa"
+    )
+
+    payload = {
+        "amount": str(amount),
+        "currency": "ETB",
+        "email": "user@email.com",
+        "first_name": "Equb",
+        "last_name": "Member",
+        "tx_ref": tx_ref,
+        "callback_url": "https://yourdomain.com/api/chapa/callback/",
+        "return_url": "https://yourdomain.com/payment-success/"
+    }
+
+    headers = {
+        "Authorization": f"Bearer {settings.CHAPA_SECRET_KEY}"
+    }
+
+    response = requests.post(
+        "https://api.chapa.co/v1/transaction/initialize",
+        json=payload,
+        headers=headers,
+        timeout=10  # seconds
+    )
+
+    data = response.json()
+
+    payment.chapa_checkout_url = data["data"]["checkout_url"]
+    payment.save()
+
+    return Response({
+        "checkout_url": payment.chapa_checkout_url,
+        "tx_ref": tx_ref
+    })
+    
+@api_view(["GET"])
+def verify_chapa_payment(request, tx_ref):
+    payment = Payment.objects.get(transaction_id=tx_ref)
+
+    headers = {
+        "Authorization": f"Bearer {settings.CHAPA_SECRET_KEY}"
+    }
+
+    response = requests.get(
+        f"https://api.chapa.co/v1/transaction/verify/{tx_ref}",
+        headers=headers,
+        timeout=10  # seconds
+    )
+
+    data = response.json()
+
+    if data["status"] == "success":
+        payment.status = "completed"
+        payment.paid_at = timezone.now()
+        payment.save()
+
+        return Response({"status": "completed"})
+
+    payment.status = "rejected"
+    payment.save()
+
+    return Response({"status": "failed"})
+
+
+# ===========================
+# Join Equb via Chapa
+# ===========================
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def join_equb_chapa(request, equb_id):
+    """
+    Join an Equb and pay via Chapa.
+    - Initial join (round 0): amount = equb.contribution_amount
+    - Ongoing join: amount = completed_rounds * equb.contribution_amount
+    Returns checkout_url and tx_ref for redirecting user to Chapa payment.
+    """
+    user = get_user_model().objects.get(pk=request.user.pk)
+
+    # 1. Get active Equb
+    equb = get_object_or_404(Equb, id=equb_id)
+    if equb.status != "active":
+        return Response(
+            {"message": "This Equb is not active."},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    # 2. Prevent duplicate join
+    if EqubMember.objects.filter(user=user, equb=equb).exists():
+        return Response(
+            {"message": "You already joined this Equb."},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    # 3. Determine initial vs ongoing
+    completed_rounds = LotteryWinner.objects.filter(equb=equb).count()
+    is_initial_join = completed_rounds == 0
+
+    # 4. Calculate amount
+    if is_initial_join:
+        amount = equb.contribution_amount
+        round_number = 0
+    else:
+        amount = completed_rounds * equb.contribution_amount
+        round_number = completed_rounds
+
+    # 5. Check Equb capacity
+    if is_initial_join:
+        total_members = EqubMember.objects.filter(equb=equb).count()
+        if total_members >= equb.total_members:
+            return Response(
+                {"message": "This Equb is already full."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+    else:
+        active_members = EqubMember.objects.filter(equb=equb, status="active").count()
+        if active_members >= equb.total_members:
+            return Response(
+                {"message": "This Equb is already full."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+    # 6. Create pending EqubMember
+    membership = EqubMember.objects.create(
+        user=user,
+        equb=equb,
+        status="pending",
+        payment_status="pending"
+    )
+
+    # 7. Generate unique tx_ref for Chapa
+    tx_ref = f"equb-{uuid.uuid4()}"
+
+    # 8. Create pending Payment (for Chapa callback to update)
+    payment = Payment.objects.create(
+        equb_member=membership,
+        amount=amount,
+        transaction_id=tx_ref,
+        round_number=round_number,
+        status="pending",
+        payment_method="chapa"
+    )
+
+    # 9. Build Chapa payload (email and name for Chapa)
+    email = _get_chapa_email(user)
+    first, last = _get_chapa_user_names(user)
+
+    # Chapa will call this URL and pass trx_ref as query param
+    callback_url = request.build_absolute_uri(reverse("chapa-callback"))
+    return_url = request.build_absolute_uri("/payment-success/")
+
+    payload = {
+        "amount": str(amount),
+        "currency": "ETB",
+        "email": email,
+        "first_name": first,
+        "last_name": last,
+        "tx_ref": tx_ref,
+        "callback_url": callback_url,
+        "return_url": return_url
+    }
+
+    headers = {
+        "Authorization": f"Bearer {settings.CHAPA_SECRET_KEY}"
+    }
+
+    # 10. Call Chapa initialize API
+    try:
+        response = requests.post(
+            "https://api.chapa.co/v1/transaction/initialize",
+            json=payload,
+            headers=headers,
+            timeout=10
+        )
+        data = response.json()
+    except requests.RequestException as e:
+        # Cleanup on failure
+        payment.delete()
+        membership.delete()
+        return Response(
+            {"message": "Payment initialization failed. Please try again."},
+            status=status.HTTP_502_BAD_GATEWAY
+        )
+
+    if not response.ok or data.get("status") != "success":
+        
+        payment.delete()
+        membership.delete()
+        return Response(
+            {"message": data.get("message", "Chapa payment initialization failed.")},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    checkout_url = data.get("data", {}).get("checkout_url", "")
+    if not checkout_url:
+        payment.delete()
+        membership.delete()
+        return Response(
+            {"message": "Invalid response from payment provider."},
+            status=status.HTTP_502_BAD_GATEWAY
+        )
+
+    return Response({
+        "message": "Redirect user to checkout_url to complete payment.",
+        "checkout_url": checkout_url,
+        "tx_ref": tx_ref,
+        "amount": float(amount),
+        "round_number": round_number,
+        "equb_name": equb.name
+    }, status=status.HTTP_201_CREATED)
+
+
+@api_view(["GET", "POST"])
+def chapa_callback(request):
+    tx_ref = request.GET.get("trx_ref") or request.data.get("trx_ref")
+
+    if not tx_ref:
+        return Response({"error": "Missing tx_ref"}, status=400)
+
+    try:
+        payment = Payment.objects.get(transaction_id=tx_ref)
+    except Payment.DoesNotExist:
+        return Response({"error": "Payment not found"}, status=404)
+
+    # Verify with Chapa
+    headers = {
+        "Authorization": f"Bearer {settings.CHAPA_SECRET_KEY}"
+    }
+
+    response = requests.get(
+        f"https://api.chapa.co/v1/transaction/verify/{tx_ref}",
+        headers=headers,
+        timeout=10
+    )
+
+    data = response.json()
+
+    if data.get("status") == "success":
+        payment.status = "completed"
+        payment.paid_at = timezone.now()
+        payment.save()
+
+        return Response({"status": "completed"})
+
+    payment.status = "rejected"
+    payment.save()
+
+    return Response({"status": "failed"})

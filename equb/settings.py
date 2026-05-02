@@ -28,6 +28,8 @@ CORS_ALLOWED_ORIGINS = [
     "http://192.168.137.1",
     "http://192.168.137.1:4173",
     "http://49.13.235.107:3006",
+    "http://localhost:3000",
+    "https://equb-admin-panal.vercel.app",
 ]
 
 # Application definition
@@ -66,6 +68,7 @@ INSTALLED_APPS = [
     "user",
     "advert",
     "equbApp",
+    "owner_panel",
 ]
 
 MIDDLEWARE = [
@@ -192,7 +195,27 @@ SPECTACULAR_SETTINGS = {
     "SERVE_INCLUDE_SCHEMA": False,
     # OTHER SETTINGS
 }
+# This is the key part to fix the template loading issue. It tells Django to look for templates in the "templates" directory at the project root.
+TEMPLATES = [
+    {
+        "BACKEND": "django.template.backends.django.DjangoTemplates",
+        "DIRS": [BASE_DIR / "templates"],  # ← make sure this line is correct
+        "APP_DIRS": True,
+        "OPTIONS": {
+            "context_processors": [
+                "django.template.context_processors.debug",
+                "django.template.context_processors.request",
+                "django.contrib.auth.context_processors.auth",
+                "django.contrib.messages.context_processors.messages",
+            ],
+        },
+    }
+]
 
 # CRONJOBS = [
 #     ('24 15 * * *', 'order.tasks.generate_earning'),
 # ]
+
+
+CHAPA_SECRET_KEY = "CHASECK_TEST-cQcHMEZDMtPjb7DPgNSBRadb90SPxj4J"
+CHAPA_BASE_URL = "CHAPUBK_TEST-u7Pgq7cPo1coU9m3F71olZ5aUps3TLlc"

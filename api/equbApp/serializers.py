@@ -1,11 +1,13 @@
 from django.contrib.auth import get_user_model
 # serializers.py
 from rest_framework import serializers
+from .bank_constants import get_bank_by_code
 from .models import (
     EqubType,
     EqubCategory,
     Equb,
     EqubMember,
+    OwnerBankAccount,
     Payment,
     LotteryWinner,
     Notification,
@@ -36,8 +38,39 @@ class EqubCategoryWithCountSerializer(serializers.ModelSerializer):
 
     def get_total_equbs(self, obj):
         return obj.equbs.count()  # 'equbs' is the related_name from Equb.category
+# -------------------- Owner bank (public detail for members) --------------------
+class OwnerBankAccountPublicSerializer(serializers.ModelSerializer):
+    bank_name = serializers.SerializerMethodField()
+    bank_logo_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = OwnerBankAccount
+        fields = [
+            "id",
+            "bank_code",
+            "bank_name",
+            "bank_logo_url",
+            "account_number",
+            "account_holder_name",
+            "label",
+        ]
+
+    def get_bank_name(self, obj):
+        b = get_bank_by_code(obj.bank_code)
+        return b["name"] if b else None
+
+    def get_bank_logo_url(self, obj):
+        b = get_bank_by_code(obj.bank_code)
+        if not b:
+            return None
+        url = b.get("logo_url") or ""
+        return url if url else None
+
+
 # -------------------- Equb --------------------
 class EqubSerializer(serializers.ModelSerializer):
+    payout_bank_accounts = OwnerBankAccountPublicSerializer(many=True, read_only=True)
+
     class Meta:
         model = Equb
         fields = "__all__"
