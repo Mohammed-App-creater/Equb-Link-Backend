@@ -32,6 +32,7 @@ from .serializers import (
 
 from equbApp.bank_constants import ETHIOPIAN_BANKS
 from equbApp.models import Equb, EqubMember, EqubType, EqubCategory, LotteryWinner, OwnerBankAccount, Payment
+from equbApp.serializers import EqubTypeSerializer, EqubCategorySerializer
 from owner_panel.models import LotteryRound
 
 
@@ -568,33 +569,25 @@ class EqubActivityView(APIView):
 
         return Response(activity_logs)
     
-class EqubTypesView(generics.ListAPIView):
+class OwnerEqubTypeListCreateView(generics.ListCreateAPIView):
     permission_classes = [IsEqubOwner]
-    
-    def get(self, request):
-        equb_types = EqubType.objects.all()
-        data = [
-            {
-                "id": et.id,
-                "name": et.name,
-                "description": et.description,
-            }
-            for et in equb_types
-        ]
-        return Response(data)
-    
-class EqubCategoriesView(generics.ListAPIView):
+    serializer_class = EqubTypeSerializer
+    queryset = EqubType.objects.all()
+
+
+class OwnerEqubTypeDetailView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [IsEqubOwner]
-    
-    def get(self, request):
-        equb_categories = EqubCategory.objects.all()
-        data = [
-            {
-                "id": ec.id,
-                "name": ec.name,
-                "description": ec.description,
-                "image": request.build_absolute_uri(ec.image.url) if ec.image else None,
-            }
-            for ec in equb_categories
-        ]
-        return Response(data)
+    serializer_class = EqubTypeSerializer
+    queryset = EqubType.objects.all()
+
+
+class OwnerEqubCategoryListCreateView(generics.ListCreateAPIView):
+    permission_classes = [IsEqubOwner]
+    serializer_class = EqubCategorySerializer
+    queryset = EqubCategory.objects.all().order_by('-is_favorite', 'name')
+
+
+class OwnerEqubCategoryDetailView(generics.RetrieveUpdateDestroyAPIView):
+    permission_classes = [IsEqubOwner]
+    serializer_class = EqubCategorySerializer
+    queryset = EqubCategory.objects.all()

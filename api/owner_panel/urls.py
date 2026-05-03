@@ -120,15 +120,25 @@ urlpatterns = [
     # Equb Types
     path(
         'equbs/types/',
-        views.EqubTypesView.as_view(),
-        name='equb-types'
+        views.OwnerEqubTypeListCreateView.as_view(),
+        name='owner-equb-type-list'
     ),
-    
+    path(
+        'equbs/types/<uuid:pk>/',
+        views.OwnerEqubTypeDetailView.as_view(),
+        name='owner-equb-type-detail'
+    ),
+
     # Equb Categories
     path(
         'equbs/categories/',
-        views.EqubCategoriesView.as_view(),
-        name='equb-categories'
+        views.OwnerEqubCategoryListCreateView.as_view(),
+        name='owner-equb-category-list'
+    ),
+    path(
+        'equbs/categories/<uuid:pk>/',
+        views.OwnerEqubCategoryDetailView.as_view(),
+        name='owner-equb-category-detail'
     ),
 
 ]
