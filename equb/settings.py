@@ -215,3 +215,13 @@ TEMPLATES = [
 
 CHAPA_SECRET_KEY = os.environ.get("CHAPA_SECRET_KEY", "")
 # CHAPA_BASE_URL removed — was unused (actual API host is hardcoded at call sites)
+
+
+# --- SMS (password-reset codes) ---
+# "console" prints the code to the server log (development).
+# "afromessage" sends real SMS via AfroMessage; set the AFROMESSAGE_* values.
+SMS_PROVIDER = os.environ.get("SMS_PROVIDER", "console")
+AFROMESSAGE_TOKEN = os.environ.get("AFROMESSAGE_TOKEN", "")
+AFROMESSAGE_IDENTIFIER_ID = os.environ.get("AFROMESSAGE_IDENTIFIER_ID", "")
+AFROMESSAGE_SENDER_NAME = os.environ.get("AFROMESSAGE_SENDER_NAME", "")
+PASSWORD_RESET_CODE_TTL_MINUTES = int(os.environ.get("PASSWORD_RESET_CODE_TTL_MINUTES", "10"))

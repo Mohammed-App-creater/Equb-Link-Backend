@@ -420,3 +420,166 @@ def owner_profile(request):
         "name": getattr(profile, "name", None),
         "photo": photo,
     })
+
+
+# =========================== Password reset (phone OTP) ===========================
+import hashlib
+import hmac
+import secrets
+from datetime import timedelta
+
+from django.conf import settings
+from django.utils import timezone
+from rest_framework.decorators import authentication_classes
+
+from .models import PasswordResetCode
+from .sms import SmsDeliveryError, send_sms
+
+RESET_CODE_MAX_ATTEMPTS = 5
+RESET_RESEND_COOLDOWN = timedelta(seconds=60)
+RESET_GENERIC_RESPONSE = {
+    "detail": "If an account exists for that phone number, a reset code has been sent by SMS."
+}
+
+
+def _phone_candidates(raw):
+    """Accept 0911..., 911..., 251911... or +251911... and match the stored form."""
+    cleaned = "".join(ch for ch in str(raw or "") if ch.isdigit() or ch == "+")
+    if not cleaned:
+        return []
+    candidates = {cleaned}
+    digits = cleaned.lstrip("+")
+    if digits.startswith("251") and len(digits) == 12:
+        local = digits[3:]
+        candidates.update({"+" + digits, digits, "0" + local, local})
+    elif digits.startswith("0") and len(digits) == 10:
+        local = digits[1:]
+        candidates.update({"+251" + local, "251" + local, local})
+    elif len(digits) == 9:
+        candidates.update({"+251" + digits, "251" + digits, "0" + digits})
+    return list(candidates)
+
+
+def _find_user_by_phone(raw):
+    candidates = _phone_candidates(raw)
+    if not candidates:
+        return None
+    return User.objects.filter(phone__in=candidates, is_active=True).first()
+
+
+def _hash_reset_code(code):
+    return hmac.new(settings.SECRET_KEY.encode(), code.encode(), hashlib.sha256).hexdigest()
+
+
+@api_view(["POST"])
+@authentication_classes([])
+@permission_classes([AllowAny])
+def password_reset_request(request):
+    """
+    Body: {"phone": "..."}. Sends a 6-digit code by SMS. The response is the
+    same whether or not the phone exists (no account enumeration). A new code
+    is not sent within 60s of the previous one; the previous one stays valid.
+    """
+    phone = request.data.get("phone")
+    if not phone:
+        return Response({"error": "phone is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+    user = _find_user_by_phone(phone)
+    if user is None:
+        return Response(RESET_GENERIC_RESPONSE)
+
+    now = timezone.now()
+    latest = user.password_reset_codes.filter(used_at__isnull=True, expires_at__gt=now).first()
+    if latest and now - latest.created_at < RESET_RESEND_COOLDOWN:
+        return Response(RESET_GENERIC_RESPONSE)
+
+    # Only one live code per user
+    user.password_reset_codes.filter(used_at__isnull=True).update(used_at=now)
+
+    code = f"{secrets.randbelow(10 ** 6):06d}"
+    ttl = settings.PASSWORD_RESET_CODE_TTL_MINUTES
+    PasswordResetCode.objects.create(
+        user=user,
+        code_hash=_hash_reset_code(code),
+        expires_at=now + timedelta(minutes=ttl),
+    )
+
+    try:
+        send_sms(
+            user.phone,
+            f"Your Equb Link password reset code is {code}. It expires in {ttl} minutes.",
+        )
+    except SmsDeliveryError:
+        return Response(
+            {"error": "We could not send the SMS right now. Please try again later."},
+            status=status.HTTP_502_BAD_GATEWAY,
+        )
+
+    payload = dict(RESET_GENERIC_RESPONSE)
+    if settings.DEBUG and settings.SMS_PROVIDER == "console":
+        # Development convenience: no SMS is actually sent with the console provider.
+        payload["debug_code"] = code
+    return Response(payload)
+
+
+@api_view(["POST"])
+@authentication_classes([])
+@permission_classes([AllowAny])
+def password_reset_confirm(request):
+    """
+    Body: {"phone", "code", "new_password", "confirm_password"}.
+    On success the password is changed and every existing auth token for the
+    account is revoked, so the user signs in again everywhere.
+    """
+    phone = request.data.get("phone")
+    code = str(request.data.get("code") or "").strip()
+    new_password = request.data.get("new_password") or ""
+    confirm_password = request.data.get("confirm_password") or ""
+
+    if not all([phone, code, new_password, confirm_password]):
+        return Response(
+            {"error": "phone, code, new_password and confirm_password are required."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    if new_password != confirm_password:
+        return Response({"error": "Passwords do not match."}, status=status.HTTP_400_BAD_REQUEST)
+    if len(new_password) < 8:
+        return Response(
+            {"error": "Password must be at least 8 characters."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    invalid = Response(
+        {"error": "Invalid or expired code. Please request a new one."},
+        status=status.HTTP_400_BAD_REQUEST,
+    )
+
+    user = _find_user_by_phone(phone)
+    if user is None:
+        return invalid
+
+    now = timezone.now()
+    entry = user.password_reset_codes.filter(used_at__isnull=True).first()
+    if entry is None or entry.expires_at < now:
+        return invalid
+    if entry.attempts >= RESET_CODE_MAX_ATTEMPTS:
+        return Response(
+            {"error": "Too many incorrect attempts. Please request a new code."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    if not hmac.compare_digest(entry.code_hash, _hash_reset_code(code)):
+        entry.attempts += 1
+        entry.save(update_fields=["attempts"])
+        remaining = RESET_CODE_MAX_ATTEMPTS - entry.attempts
+        return Response(
+            {"error": "Invalid code.", "remaining_attempts": remaining},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    user.set_password(new_password)
+    user.save()
+    entry.used_at = now
+    entry.save(update_fields=["used_at"])
+    Token.objects.filter(user=user).delete()
+
+    return Response({"detail": "Password reset successfully. Please sign in with your new password."})

@@ -153,3 +153,25 @@ class EqubAdmin(models.Model):
     def __str__(self):
         return self.name
 
+
+# =========================
+# PASSWORD RESET CODE (phone OTP)
+# =========================
+class PasswordResetCode(models.Model):
+    """One-time 6-digit code sent by SMS. Only the HMAC of the code is stored."""
+
+    user = models.ForeignKey(
+        Account, on_delete=models.CASCADE, related_name="password_reset_codes"
+    )
+    code_hash = models.CharField(max_length=128)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    attempts = models.PositiveSmallIntegerField(default=0)
+    used_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        state = "used" if self.used_at else "active"
+        return f"Reset code for {self.user.phone} ({state})"
