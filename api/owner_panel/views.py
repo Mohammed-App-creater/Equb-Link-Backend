@@ -591,3 +591,104 @@ class OwnerEqubCategoryDetailView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [IsEqubOwner]
     serializer_class = EqubCategorySerializer
     queryset = EqubCategory.objects.all()
+
+
+# =========================== Manual payment recording ===========================
+from decimal import Decimal, InvalidOperation
+
+from django.core.exceptions import ValidationError as DjangoValidationError
+from rest_framework import status as drf_status
+
+from equbApp.models import Notification
+
+
+class OwnerPaymentRecordView(APIView):
+    """
+    Owner records a contribution received outside the app (cash / bank /
+    telebirr). Multipart body: equb_member, amount, round_number,
+    payment_method, receipt_image (optional). Created as `completed`
+    because the owner is confirming receipt.
+    """
+
+    permission_classes = [IsEqubOwner]
+
+    def post(self, request, equb_id):
+        equb = get_object_or_404(Equb, id=equb_id, owner=request.user)
+
+        member_id = request.data.get("equb_member")
+        raw_amount = request.data.get("amount")
+        raw_round = request.data.get("round_number")
+        payment_method = (request.data.get("payment_method") or "cash").strip().lower()
+
+        if not member_id or raw_amount in (None, "") or raw_round in (None, ""):
+            return Response(
+                {"error": "equb_member, amount and round_number are required."},
+                status=drf_status.HTTP_400_BAD_REQUEST,
+            )
+        try:
+            amount = Decimal(str(raw_amount))
+            round_number = int(raw_round)
+        except (InvalidOperation, ValueError):
+            return Response(
+                {"error": "amount must be a number and round_number a whole number."},
+                status=drf_status.HTTP_400_BAD_REQUEST,
+            )
+        if amount <= 0 or round_number < 1:
+            return Response(
+                {"error": "amount and round_number must be positive."},
+                status=drf_status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            member = EqubMember.objects.filter(id=member_id, equb=equb).first()
+        except (ValueError, DjangoValidationError):
+            member = None
+        if member is None:
+            return Response(
+                {"error": "Member does not belong to this equb."},
+                status=drf_status.HTTP_400_BAD_REQUEST,
+            )
+        if Payment.objects.filter(equb_member=member, round_number=round_number).exists():
+            return Response(
+                {"error": "A payment for this member and round already exists."},
+                status=drf_status.HTTP_400_BAD_REQUEST,
+            )
+
+        now = timezone.now()
+        payment = Payment.objects.create(
+            equb_member=member,
+            amount=amount,
+            payment_method=payment_method,
+            transaction_id=f"MANUAL-{uuid.uuid4().hex[:10].upper()}",
+            receipt_image=request.FILES.get("receipt_image"),
+            paid_at=now,
+            status="completed",
+            approved_by=request.user,
+            approved_at=now,
+            round_number=round_number,
+        )
+
+        AuditLog.objects.create(
+            user=request.user,
+            action="record_payment",
+            target=str(payment.id),
+            meta={
+                "member": str(member.id),
+                "round": round_number,
+                "amount": str(amount),
+                "method": payment_method,
+            },
+        )
+        Notification.objects.create(
+            user=member.user,
+            notif_type="payment_approved",
+            message=(
+                f"Your {payment_method} payment of ETB {amount} for {equb.name} "
+                f"(Round {round_number}) was recorded by the equb owner."
+            ),
+        )
+
+        return Response(
+            OwnerPaymentSerializer(payment).data,
+            status=drf_status.HTTP_201_CREATED,
+        )

@@ -382,3 +382,41 @@ def me(request):
         },
         status=status.HTTP_200_OK,
     )
+
+
+# =========================== Owner panel profile ===========================
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def owner_profile(request):
+    """
+    Flat profile for the owner admin panel: account flags plus the display
+    name / photo from the EqubAdmin (or Admin) profile row.
+    """
+    user = request.user
+    if not (user.is_equb_admin or user.is_admin):
+        return Response(
+            {"error": "Owner account required."},
+            status=status.HTTP_403_FORBIDDEN,
+        )
+
+    profile = None
+    if user.is_equb_admin:
+        profile = EqubAdmin.objects.filter(user=user).first()
+    if profile is None and user.is_admin:
+        profile = Admin.objects.filter(user=user).first()
+
+    photo = None
+    photo_field = getattr(profile, "photo", None)
+    if photo_field:
+        photo = request.build_absolute_uri(photo_field.url)
+
+    return Response({
+        "id": user.id,
+        "phone": user.phone,
+        "email": user.email,
+        "is_admin": user.is_admin,
+        "is_equb_admin": user.is_equb_admin,
+        "is_customer": user.is_customer,
+        "name": getattr(profile, "name", None),
+        "photo": photo,
+    })

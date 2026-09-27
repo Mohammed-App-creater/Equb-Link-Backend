@@ -70,6 +70,12 @@ urlpatterns = [
         name="owner-payment-reject"
     ),
 
+    path(
+        "equbs/<uuid:equb_id>/payments/record/",
+        views.OwnerPaymentRecordView.as_view(),
+        name="owner-payment-record"
+    ),
+
     # Dashboard
     path(
         "dashboard/",

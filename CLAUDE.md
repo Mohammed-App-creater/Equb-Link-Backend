@@ -12,7 +12,7 @@ Django 5.2, DRF 3.16, drf-spectacular, django-cors-headers, django-filter, djang
 ## Apps
 - `user`: signup, login, me, profile update, change password, admin creation
 - `equbApp`: EqubType, EqubCategory, OwnerBankAccount, Equb, EqubMember, Payment, LotteryWinner, Notification (has `is_pinned`), SupportTicket, AppConfig. Holds the customer and mobile endpoints and Chapa (`chapa/initialize/`, `chapa/verify/<tx_ref>/`, `chapa/callback/`, `payment-success/`). Customer notification actions: `notifications/read/`, `read-all/`, `clear-all/`, `<id>/toggle-pin/`. Customer support tickets: `support/tickets/` (GET own, POST create); `admin/support-tickets/` is admin-only.
-- `owner_panel`: owner API mounted at both `/api/owner/` and `/owner/`. Models: AuditLog, LotteryRound. Endpoints for approving/rejecting members and payments, round draw and payout, export (pandas), reports and activity.
+- `owner_panel`: owner API mounted at both `/api/owner/` and `/owner/`. Models: AuditLog, LotteryRound. Endpoints for approving/rejecting members and payments, round draw and payout, export (pandas), reports and activity. `equbs/<id>/payments/record/` lets the owner record an off-app payment (created as completed). The admin panel loads its profile from `api/owner/profile/` (defined in the `user` app).
 - `advert`: Advert, Testimonial, Feedback, FAQ
 
 ## Commands (Windows, from this folder)
