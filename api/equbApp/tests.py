@@ -1,9 +1,10 @@
+from django.core.cache import cache
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
 from django.contrib.auth import get_user_model
 from rest_framework.authtoken.models import Token
-from .models import Equb, EqubCategory, EqubType
+from .models import AppConfig, Equb, EqubCategory, EqubType
 import datetime
 
 User = get_user_model()
@@ -113,3 +114,22 @@ class EqubDetailTests(APITestCase):
         }, format="multipart")
         self.assertEqual(response.status_code, status.HTTP_201_CREATED, response.data)
         self.assertEqual(response.data['member_status'], "pending")
+
+
+class AppConfigEndpointTests(APITestCase):
+    def setUp(self):
+        cache.clear()
+        AppConfig.objects.all().delete()
+        AppConfig.objects.create(latest_version="1.2.3", force_update=False)
+
+    def tearDown(self):
+        cache.clear()
+
+    def test_app_config_returns_expected_shape(self):
+        response = self.client.get("/app-config/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json(), {
+            "latestVersion": "1.2.3",
+            "forceUpdate": False,
+            "_note": "Edit these values at /admin/equbApp/appconfig/",
+        })

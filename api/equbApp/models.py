@@ -341,3 +341,43 @@ class SupportTicket(models.Model):
     def __str__(self):
         return f"Support Ticket - {self.subject}"
 
+
+# ===========================
+# APP CONFIG (singleton — drives mobile app version-check)
+# ===========================
+from django.core.validators import RegexValidator
+
+semver_validator = RegexValidator(
+    regex=r"^\d+\.\d+\.\d+$",
+    message="Must be valid semver MAJOR.MINOR.PATCH (e.g. 1.2.3).",
+)
+
+
+class AppConfig(models.Model):
+    SINGLETON_ID = 1
+
+    id = models.PositiveSmallIntegerField(
+        primary_key=True, default=SINGLETON_ID, editable=False
+    )
+    latest_version = models.CharField(
+        max_length=32, default="1.0.0", validators=[semver_validator]
+    )
+    force_update = models.BooleanField(default=False)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "App Config"
+        verbose_name_plural = "App Config"
+
+    def __str__(self):
+        return f"v{self.latest_version} (forceUpdate={self.force_update})"
+
+    def save(self, *args, **kwargs):
+        self.pk = self.SINGLETON_ID
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+    @classmethod
+    def load(cls):
+        obj, _ = cls.objects.get_or_create(pk=cls.SINGLETON_ID)
+        return obj

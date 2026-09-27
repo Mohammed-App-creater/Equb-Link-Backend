@@ -13,6 +13,7 @@ from .models import (
     LotteryWinner,
     Notification,
     SupportTicket,
+    AppConfig,
 )
 
 
@@ -350,3 +351,18 @@ class SupportTicketAdmin(admin.ModelAdmin):
     search_fields = ("subject", "user__name", "message")
     list_filter = ("status",)
     readonly_fields = ("created_at", "updated_at")
+
+
+# ===========================
+# App Config Admin (singleton — drives mobile version-check)
+# ===========================
+@admin.register(AppConfig)
+class AppConfigAdmin(admin.ModelAdmin):
+    list_display = ("latest_version", "force_update", "updated_at")
+    readonly_fields = ("updated_at",)
+
+    def has_add_permission(self, request):
+        return not AppConfig.objects.exists()
+
+    def has_delete_permission(self, request, obj=None):
+        return False

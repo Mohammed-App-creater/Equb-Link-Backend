@@ -7,12 +7,13 @@ from django.shortcuts import get_object_or_404
 from django.urls import reverse
 import requests
 from django.shortcuts import render
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.decorators import api_view, permission_classes, authentication_classes
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from user.permissions import IsAdminUser
 from rest_framework.response import Response
 from rest_framework import status
 from django.conf import settings
+from django.views.decorators.cache import cache_page
 
 from .models import (
     EqubType,
@@ -23,6 +24,7 @@ from .models import (
     LotteryWinner,
     Notification,
     SupportTicket,
+    AppConfig,
 )
 from .serializers import (
     EqubTypeSerializer,
@@ -1519,6 +1521,24 @@ def verify_chapa_payment(request, tx_ref):
         )
 
     return _apply_chapa_verification(payment, data)
+
+
+# ===========================
+# Mobile app version-check endpoint
+# ===========================
+# TODO: add per-platform support via `?platform=ios|android` once iOS app ships.
+# Today Android-only — single (latestVersion, forceUpdate) pair is sufficient.
+@cache_page(60)
+@api_view(["GET"])
+@authentication_classes([])
+@permission_classes([AllowAny])
+def app_config(request):
+    cfg = AppConfig.load()
+    return Response({
+        "latestVersion": cfg.latest_version,
+        "forceUpdate": cfg.force_update,
+        "_note": "Edit these values at /admin/equbApp/appconfig/",
+    })
 
 
 # ===========================

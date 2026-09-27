@@ -10,10 +10,16 @@ from drf_spectacular.views import (
 )
 
 from owner_panel.views import EthiopianBankListView
+from equbApp.views import app_config
 
 urlpatterns = [
 
     path('admin/', admin.site.urls),
+    # Mobile app version-check (must match both /app-config and /app-config/
+    # because APPEND_SLASH 301 redirects don't preserve method on POST and
+    # the client hits the bare path).
+    path("app-config", app_config, name="app-config-noslash"),
+    path("app-config/", app_config, name="app-config"),
         path("", include("advert.urls")),
     path(
         "",
