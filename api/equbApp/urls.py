@@ -212,6 +212,14 @@ urlpatterns = [
 
     # Chapa callback (Chapa calls this)
     path("chapa/callback/", views.chapa_callback, name="chapa-callback"),
+
+    # ----------------- Notifications: bulk actions + pin (customer) -----------------
+    path("notifications/read-all/", views.mark_all_notifications_as_read, name="mark-all-notifications-read"),
+    path("notifications/clear-all/", views.clear_all_notifications, name="clear-all-notifications"),
+    path("notifications/<uuid:notification_id>/toggle-pin/", views.toggle_notification_pin, name="toggle-notification-pin"),
+
+    # ----------------- Support tickets (customer) -----------------
+    path("support/tickets/", views.customer_support_tickets, name="customer-support-tickets"),
     
 ]
 

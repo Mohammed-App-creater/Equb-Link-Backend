@@ -1700,3 +1700,64 @@ def chapa_callback(request):
     payment.save()
 
     return Response({"status": "failed"})
+
+
+# =========================== Customer notifications (bulk / pin) ===========================
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def mark_all_notifications_as_read(request):
+    """Marks every unread notification of the logged-in user as read."""
+    updated = Notification.objects.filter(user=request.user, is_read=False).update(is_read=True)
+    return Response({"message": f"{updated} notifications marked as read."})
+
+
+@api_view(["DELETE"])
+@permission_classes([IsAuthenticated])
+def clear_all_notifications(request):
+    """Deletes all notifications of the logged-in user."""
+    deleted, _ = Notification.objects.filter(user=request.user).delete()
+    return Response({"message": f"{deleted} notifications cleared."})
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def toggle_notification_pin(request, notification_id):
+    """Pins / unpins one of the logged-in user's notifications."""
+    notification = get_object_or_404(Notification, id=notification_id, user=request.user)
+    notification.is_pinned = not notification.is_pinned
+    notification.save(update_fields=["is_pinned", "updated_at"])
+    return Response({
+        "message": "Notification pinned." if notification.is_pinned else "Notification unpinned.",
+        "is_pinned": notification.is_pinned,
+    })
+
+
+# =========================== Customer support tickets ===========================
+from .serializers import CustomerSupportTicketSerializer
+
+
+@api_view(["GET", "POST"])
+@permission_classes([IsAuthenticated])
+def customer_support_tickets(request):
+    """
+    GET  -> the logged-in user's support tickets, newest first.
+    POST -> create a ticket: {"subject": "...", "message": "..."}
+    """
+    if request.method == "GET":
+        tickets = SupportTicket.objects.filter(user=request.user).order_by("-created_at")
+        return Response({
+            "message": "Support tickets retrieved successfully.",
+            "data": CustomerSupportTicketSerializer(tickets, many=True).data,
+        })
+
+    serializer = CustomerSupportTicketSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    ticket = serializer.save(user=request.user)
+    notify_admins(
+        message=f"New support ticket from {request.user.phone}: {ticket.subject}",
+        notif_type="support_ticket",
+    )
+    return Response({
+        "message": "Support ticket submitted.",
+        "data": CustomerSupportTicketSerializer(ticket).data,
+    }, status=status.HTTP_201_CREATED)

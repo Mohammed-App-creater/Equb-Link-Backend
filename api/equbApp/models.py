@@ -297,6 +297,7 @@ class Notification(models.Model):
     notif_type = models.CharField(max_length=50)
     message = models.TextField()
     is_read = models.BooleanField(default=False)
+    is_pinned = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
