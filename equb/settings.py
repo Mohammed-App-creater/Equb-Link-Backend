@@ -1,4 +1,5 @@
 from pathlib import Path
+from django.core.exceptions import ImproperlyConfigured
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -28,19 +29,32 @@ ALLOWED_HOSTS = [
 if not DEBUG:
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
+    if len(SECRET_KEY) < 50 or SECRET_KEY.startswith("django-insecure-"):
+        raise ImproperlyConfigured(
+            "DJANGO_SECRET_KEY must be at least 50 random characters in production."
+        )
 
+# Behind the TLS-terminating web server: trust its X-Forwarded-Proto so
+# request.is_secure() / build_absolute_uri() produce https URLs.
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+SECURE_SSL_REDIRECT = os.environ.get("SECURE_SSL_REDIRECT", "False").lower() in ("1", "true", "yes")
+SECURE_HSTS_SECONDS = int(os.environ.get("SECURE_HSTS_SECONDS", "0"))
+SECURE_HSTS_INCLUDE_SUBDOMAINS = SECURE_HSTS_SECONDS > 0
+SECURE_HSTS_PRELOAD = False
+
+# Browser origins allowed to call the API (the owner panel). Comma-separated in .env.
 CORS_ALLOWED_ORIGINS = [
-    "http://127.0.0.1:5173",
-    "http://localhost:5173",
-    "http://localhost:8080",
-    "http://127.0.0.1:9000",
-    "http://10.240.72.27:5173",
-    "http://192.168.137.1",
-    "http://192.168.137.1:4173",
-    "http://49.13.235.107:3006",
-    "http://localhost:3000",
-    "https://equb-admin-panal.vercel.app",
+    o.strip()
+    for o in os.environ.get("CORS_ALLOWED_ORIGINS", "https://equb-admin-panal.vercel.app").split(",")
+    if o.strip()
 ]
+if DEBUG:
+    CORS_ALLOWED_ORIGINS += [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    ]
 
 # Application definition
 
@@ -176,20 +190,42 @@ MEDIA_URL = "/media/"
 
 # Rest API authentication type
 REST_FRAMEWORK = {
+    # Tokens expire after AUTH_TOKEN_TTL_DAYS (see user/authentication.py)
     "DEFAULT_AUTHENTICATION_CLASSES": (
-        "rest_framework.authentication.TokenAuthentication",
+        "user.authentication.ExpiringTokenAuthentication",
     ),
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 6,
+    # Global + per-endpoint rate limits (user/throttles.py)
+    "DEFAULT_THROTTLE_CLASSES": [
+        "rest_framework.throttling.AnonRateThrottle",
+        "rest_framework.throttling.UserRateThrottle",
+    ],
+    "DEFAULT_THROTTLE_RATES": {
+        "anon": "120/min",
+        "user": "1000/min",
+        "login": "10/min",
+        "signup": "10/hour",
+        "password_reset_request": "5/hour",
+        "password_reset_confirm": "20/hour",
+    },
 }
+
+AUTH_TOKEN_TTL_DAYS = int(os.environ.get("AUTH_TOKEN_TTL_DAYS", "30"))
+MAX_UPLOAD_MB = int(os.environ.get("MAX_UPLOAD_MB", "5"))
 
 SPECTACULAR_SETTINGS = {
     "TITLE": "Equb App API",
     "DESCRIPTION": "Equb App project api",
     "VERSION": "1.0.0",
     "SERVE_INCLUDE_SCHEMA": False,
-    # OTHER SETTINGS
+    # API docs only for platform admins (log into /admin/ first, or send a token)
+    "SERVE_PERMISSIONS": ["user.permissions.IsAdminUser"],
+    "SERVE_AUTHENTICATION": [
+        "rest_framework.authentication.SessionAuthentication",
+        "user.authentication.ExpiringTokenAuthentication",
+    ],
 }
 # This is the key part to fix the template loading issue. It tells Django to look for templates in the "templates" directory at the project root.
 TEMPLATES = [
@@ -214,6 +250,8 @@ TEMPLATES = [
 
 
 CHAPA_SECRET_KEY = os.environ.get("CHAPA_SECRET_KEY", "")
+# Chapa signs webhooks with the dashboard "secret hash"; defaults to the API key if unset.
+CHAPA_WEBHOOK_SECRET = os.environ.get("CHAPA_WEBHOOK_SECRET") or CHAPA_SECRET_KEY
 # CHAPA_BASE_URL removed — was unused (actual API host is hardcoded at call sites)
 
 

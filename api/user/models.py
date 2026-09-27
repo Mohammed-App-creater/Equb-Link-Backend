@@ -6,6 +6,7 @@ from django.contrib.auth.models import (
     PermissionsMixin,
 )
 from django.core.validators import RegexValidator
+from equbApp.uploads import profile_upload_path
 
 
 # =========================
@@ -44,8 +45,9 @@ class MyAccountManager(BaseUserManager):
         user = self.model(
             phone=phone,
             email=email,
-            is_equb_admin=True,  # ✅ SET HERE
-            is_staff=True,       # ✅ REQUIRED for admin access
+            is_equb_admin=True,
+            # Owners use the owner panel, not the Django admin site.
+            is_staff=False,
             is_active=True,
         )
         user.set_password(password)
@@ -109,7 +111,7 @@ class Admin(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     name = models.CharField(max_length=30)
     phone = models.CharField(max_length=15)
-    photo = models.FileField(upload_to="uploads/profile", null=True, blank=True)
+    photo = models.ImageField(upload_to=profile_upload_path, null=True, blank=True)
 
     def __str__(self):
         return self.name
@@ -123,7 +125,7 @@ class Customer(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     name = models.CharField(max_length=30)
     phone = models.CharField(max_length=15)
-    photo = models.FileField(upload_to="uploads/profile", null=True, blank=True)
+    photo = models.ImageField(upload_to=profile_upload_path, null=True, blank=True)
 
     referral_code = models.CharField(max_length=8, null=True, blank=True)
     referred_by = models.CharField(max_length=8, null=True, blank=True)
@@ -141,7 +143,7 @@ class EqubAdmin(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     name = models.CharField(max_length=30)
     phone = models.CharField(max_length=15)
-    photo = models.FileField(upload_to="uploads/profile", null=True, blank=True)
+    photo = models.ImageField(upload_to=profile_upload_path, null=True, blank=True)
     
     def save(self, *args, **kwargs):
         # Make sure user is marked as EqubAdmin

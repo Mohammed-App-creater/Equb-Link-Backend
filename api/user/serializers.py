@@ -4,12 +4,21 @@ from django.contrib.auth import get_user_model
 User = get_user_model()
 
 from .models import Customer, EqubAdmin, Admin
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError as DjangoValidationError
+from equbApp.uploads import validate_image_upload
 
 
 class UserSerializer(serializers.ModelSerializer):
+    """Account fields safe to expose. Never the password hash, permissions or staff flags."""
     class Meta(object):
         model = User
-        fields = "__all__"
+        fields = [
+            "id", "phone", "email",
+            "is_customer", "is_equb_admin", "is_admin",
+            "is_active", "date_joined", "last_login",
+        ]
+        read_only_fields = fields
 
 
 class AdminSerializer(serializers.ModelSerializer):
@@ -74,7 +83,7 @@ class EqubAdminDataSerializer(serializers.ModelSerializer):
 
 class ProfileUpdateSerializer(serializers.Serializer):
     email = serializers.EmailField(required=False)
-    photo = serializers.ImageField(required=False)
+    photo = serializers.ImageField(required=False, validators=[validate_image_upload])
 
     def validate_email(self, value):
         user = self.context["request"].user
@@ -117,4 +126,8 @@ class ChangePasswordSerializer(serializers.Serializer):
     def validate(self, attrs):
         if attrs["new_password"] != attrs["confirm_password"]:
             raise serializers.ValidationError("Passwords do not match.")
+        try:
+            validate_password(attrs["new_password"])
+        except DjangoValidationError as exc:
+            raise serializers.ValidationError({"new_password": exc.messages})
         return attrs

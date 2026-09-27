@@ -1,6 +1,7 @@
 from django.contrib.auth import get_user_model
 # serializers.py
 from rest_framework import serializers
+from .media_views import signed_media_url
 from .bank_constants import get_bank_by_code
 from .models import (
     EqubType,
@@ -69,16 +70,31 @@ class OwnerBankAccountPublicSerializer(serializers.ModelSerializer):
 
 # -------------------- Equb --------------------
 class EqubSerializer(serializers.ModelSerializer):
-    payout_bank_accounts = OwnerBankAccountPublicSerializer(many=True, read_only=True)
+    payout_bank_accounts = serializers.SerializerMethodField()
 
     class Meta:
         model = Equb
         fields = "__all__"
 
+    def get_payout_bank_accounts(self, obj):
+        # Bank details only when the view says the caller may see them
+        # (member / owner / platform admin / someone joining). Public and
+        # list endpoints get an empty list.
+        if not self.context.get("include_payout_accounts"):
+            return []
+        return OwnerBankAccountPublicSerializer(obj.payout_bank_accounts.all(), many=True).data
+
 # -------------------- EqubMember --------------------
 
 class UserPublicSerializer(serializers.ModelSerializer):
     name = serializers.SerializerMethodField()
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        # Phone numbers of members only for fellow members / owner / admin.
+        if not self.context.get("include_member_phones"):
+            data.pop("phone", None)
+        return data
 
     class Meta:
         model = User
@@ -124,6 +140,12 @@ class PaymentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Payment
         fields = "__all__"
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        # Receipts are protected media: hand out a short-lived signed URL.
+        data["receipt_image"] = signed_media_url(self.context.get("request"), instance.receipt_image)
+        return data
 
     def validate(self, data):
         equb_member = data.get("equb_member")

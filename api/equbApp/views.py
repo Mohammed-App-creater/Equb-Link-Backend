@@ -12,6 +12,8 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from user.permissions import IsAdminUser
 from rest_framework.response import Response
 from rest_framework import status
+from django.core.exceptions import ValidationError as DjangoValidationError
+from .uploads import validate_image_upload
 from django.conf import settings
 from django.views.decorators.cache import cache_page
 
@@ -63,27 +65,22 @@ def paginated_response(queryset, serializer_class, request, filters=None):
 User = get_user_model()
 
 
-def notify_admins(message, notif_type="system"):
+def notify_admins(message, notif_type="system", equb=None):
     """
-    Send notification to all admin users
+    Notify platform admins and, when an equb is given, that equb's owner.
+    (It used to fan out to every equb owner on the platform, leaking other
+    owners' members and activity.)
     """
-    admins = User.objects.filter(
-        Q(is_superuser=True) |
-        Q(is_admin=True) |
-        Q(is_equb_admin=True)
-    )
+    recipients = {
+        u.pk: u for u in User.objects.filter(Q(is_superuser=True) | Q(is_admin=True))
+    }
+    if equb is not None and equb.owner_id:
+        recipients.setdefault(equb.owner_id, equb.owner)
 
-
-    notifications = [
-        Notification(
-            user=admin,
-            notif_type=notif_type,
-            message=message
-        )
-        for admin in admins
-    ]
-
-    Notification.objects.bulk_create(notifications)
+    Notification.objects.bulk_create([
+        Notification(user=u, notif_type=notif_type, message=message)
+        for u in recipients.values()
+    ])
 
 
 # =========================== EqubType ===========================
@@ -170,10 +167,10 @@ def equb_list_create_admin(request):
 def equb_detail_admin(request, id):
     instance = get_object_or_404(Equb, id=id)
     if request.method == "GET":
-        serializer = EqubSerializer(instance)
+        serializer = EqubSerializer(instance, context={"request": request, "include_payout_accounts": True})
         return Response({"data": serializer.data, "message": "Get successfully"})
     elif request.method == "PUT":
-        serializer = EqubSerializer(instance, data=request.data)
+        serializer = EqubSerializer(instance, data=request.data, context={"request": request, "include_payout_accounts": True})
         if serializer.is_valid():
             serializer.save()
             return Response({"data": serializer.data, "message": "Updated successfully"})
@@ -406,6 +403,7 @@ class StandardResultsSetPagination(PageNumberPagination):
 
 # -------------------- Get Active Equbs by Category --------------------
 @api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def get_active_equbs_by_category(request):
     """
     Returns all EqubCategories with their active Equbs and EqubType info.
@@ -661,6 +659,10 @@ def join_equb_initial(request, equb_id):
     payment_method = request.data.get("payment_method")
     transaction_id = request.data.get("transaction_id")
     receipt_image = request.FILES.get("receipt_image")
+    try:
+        validate_image_upload(receipt_image)
+    except DjangoValidationError as exc:
+        return Response({"message": " ".join(exc.messages)}, status=status.HTTP_400_BAD_REQUEST)
 
     if not all([amount, payment_method, transaction_id, receipt_image]):
         return Response(
@@ -668,7 +670,11 @@ def join_equb_initial(request, equb_id):
             status=status.HTTP_400_BAD_REQUEST
         )
 
-    if float(amount) != float(equb.contribution_amount):
+    try:
+        amount_value = float(amount)
+    except (TypeError, ValueError):
+        return Response({"message": "Invalid amount."}, status=status.HTTP_400_BAD_REQUEST)
+    if amount_value != float(equb.contribution_amount):
         return Response(
             {
                 "message": "Incorrect payment amount.",
@@ -712,7 +718,7 @@ def join_equb_initial(request, equb_id):
             f"for Equb: {equb.name}"
         ),
         notif_type="join_request"
-    )
+    , equb=equb)
 
 
     return Response(
@@ -781,6 +787,10 @@ def join_equb(request, equb_id):
     payment_method = request.data.get("payment_method")
     transaction_id = request.data.get("transaction_id")
     receipt_image = request.FILES.get("receipt_image")
+    try:
+        validate_image_upload(receipt_image)
+    except DjangoValidationError as exc:
+        return Response({"message": " ".join(exc.messages)}, status=status.HTTP_400_BAD_REQUEST)
 
     if not all([amount, payment_method, transaction_id, receipt_image]):
         return Response(
@@ -788,7 +798,11 @@ def join_equb(request, equb_id):
             status=status.HTTP_400_BAD_REQUEST
         )
 
-    if float(amount) != float(total_amount_required):
+    try:
+        amount_value = float(amount)
+    except (TypeError, ValueError):
+        return Response({"message": "Invalid amount."}, status=status.HTTP_400_BAD_REQUEST)
+    if amount_value != float(total_amount_required):
         return Response(
             {
                 "message": f"Incorrect payment amount.",
@@ -836,7 +850,7 @@ def join_equb(request, equb_id):
             f"(Paid {completed_rounds} rounds)"
         ),
         notif_type="join_request"
-    )
+    , equb=equb)
 
 
     return Response(
@@ -1100,7 +1114,7 @@ def pay_equb_contribution(request, equb_id):
                 f"for Equb: {equb.name} (Round {next_round})"
             ),
             notif_type="payment_submitted"
-        )
+        , equb=equb)
 
         return Response({
             "message": "Redirect user to checkout_url to complete payment.",
@@ -1113,6 +1127,10 @@ def pay_equb_contribution(request, equb_id):
     # --- Manual receipt flow ---
     transaction_id = request.data.get("transaction_id")
     receipt_image = request.FILES.get("receipt_image")
+    try:
+        validate_image_upload(receipt_image)
+    except DjangoValidationError as exc:
+        return Response({"message": " ".join(exc.messages)}, status=status.HTTP_400_BAD_REQUEST)
     if not payment_method:
         return Response({
             "message": "payment_method is required."
@@ -1146,7 +1164,7 @@ def pay_equb_contribution(request, equb_id):
             f"for Equb: {equb.name} (Round {next_round})"
         ),
         notif_type="payment_submitted"
-    )
+    , equb=equb)
 
     return Response({
         "message": f"Payment submitted for round {next_round}. Awaiting approval.",
@@ -1354,7 +1372,22 @@ def equb_detail(request, id):
     )
     
     # Serialize basic info
-    data = EqubSerializer(equb).data
+    user = request.user
+    is_member = EqubMember.objects.filter(equb=equb, user=user).exists()
+    is_privileged = user.is_admin or user.is_superuser or equb.owner_id == user.id
+    accepting_members = (
+        equb.status == "active"
+        and equb.members.exclude(status__in=["removed", "inactive"]).count() < equb.total_members
+    )
+    # Payout bank details: members / owner / admin, or a user who can still join
+    # (they transfer the first contribution before the owner approves them).
+    data = EqubSerializer(
+        equb,
+        context={
+            "request": request,
+            "include_payout_accounts": is_member or is_privileged or accepting_members,
+        },
+    ).data
     
     # Add Type info
     if equb.equb_type:
@@ -1370,7 +1403,10 @@ def equb_detail(request, id):
     # Add member stats
     data['current_members_count'] = equb.members.filter(status="active").count()
     data['total_rounds'] = equb.total_members
-    data['members_list'] = EqubMemberSerializer(equb.members.all(), many=True).data
+    data['members_list'] = EqubMemberSerializer(
+        equb.members.all(), many=True,
+        context={"include_member_phones": is_member or is_privileged},
+    ).data
     data['winners_list'] = LotteryWinnerSerializer(equb.lotterywinner_set.all(), many=True).data
     
     # Calculate current round
@@ -1694,7 +1730,7 @@ def chapa_callback(request):
     if request.method == "POST":
         signature = request.META.get("HTTP_CHAPA_SIGNATURE", "")
         expected = hmac.new(
-            settings.CHAPA_SECRET_KEY.encode(),
+            settings.CHAPA_WEBHOOK_SECRET.encode(),
             request.body,
             hashlib.sha256
         ).hexdigest()

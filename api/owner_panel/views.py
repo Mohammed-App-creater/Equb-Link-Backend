@@ -14,7 +14,10 @@ from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import generics
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, SAFE_METHODS
+from user.permissions import IsAdminUser
+from equbApp.uploads import validate_image_upload
+from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -475,13 +478,19 @@ class OwnerExportView(APIView):
                 equb_member__equb=equb
             )
 
+            def xlsx_safe(value):
+                # Spreadsheet formula injection: neutralise cells that Excel
+                # would evaluate (=, +, -, @, tab, CR).
+                text = "" if value is None else str(value)
+                return "'" + text if text[:1] in ("=", "+", "-", "@", "\t", "\r") else text
+
             data = [
                 {
-                    "member": p.equb_member.user.phone,
+                    "member": xlsx_safe(p.equb_member.user.phone),
                     "amount": p.amount,
-                    "status": p.status,
+                    "status": xlsx_safe(p.status),
                     "round": p.round_number,
-                    "approved_by": p.approved_by.phone if p.approved_by else "",
+                    "approved_by": xlsx_safe(p.approved_by.phone if p.approved_by else ""),
                 }
                 for p in qs
             ]
@@ -574,10 +583,23 @@ class OwnerEqubTypeListCreateView(generics.ListCreateAPIView):
     queryset = EqubType.objects.all()
 
 
+class IsEqubOwnerRole(IsEqubOwner):
+    """Role check only — shared catalog objects have no owner to compare against."""
+
+    def has_object_permission(self, request, view, obj):
+        return True
+
+
 class OwnerEqubTypeDetailView(generics.RetrieveUpdateDestroyAPIView):
-    permission_classes = [IsEqubOwner]
     serializer_class = EqubTypeSerializer
     queryset = EqubType.objects.all()
+
+    def get_permissions(self):
+        # Types are shared by every owner: read for owners, change/delete for
+        # platform admins only.
+        if self.request.method in SAFE_METHODS:
+            return [IsEqubOwnerRole()]
+        return [IsAdminUser()]
 
 
 class OwnerEqubCategoryListCreateView(generics.ListCreateAPIView):
@@ -587,9 +609,13 @@ class OwnerEqubCategoryListCreateView(generics.ListCreateAPIView):
 
 
 class OwnerEqubCategoryDetailView(generics.RetrieveUpdateDestroyAPIView):
-    permission_classes = [IsEqubOwner]
     serializer_class = EqubCategorySerializer
     queryset = EqubCategory.objects.all()
+
+    def get_permissions(self):
+        if self.request.method in SAFE_METHODS:
+            return [IsEqubOwnerRole()]
+        return [IsAdminUser()]
 
 
 # =========================== Manual payment recording ===========================
@@ -653,13 +679,19 @@ class OwnerPaymentRecordView(APIView):
                 status=drf_status.HTTP_400_BAD_REQUEST,
             )
 
+        receipt = request.FILES.get("receipt_image")
+        try:
+            validate_image_upload(receipt)
+        except DjangoValidationError as exc:
+            return Response({"error": " ".join(exc.messages)}, status=drf_status.HTTP_400_BAD_REQUEST)
+
         now = timezone.now()
         payment = Payment.objects.create(
             equb_member=member,
             amount=amount,
             payment_method=payment_method,
             transaction_id=f"MANUAL-{uuid.uuid4().hex[:10].upper()}",
-            receipt_image=request.FILES.get("receipt_image"),
+            receipt_image=receipt,
             paid_at=now,
             status="completed",
             approved_by=request.user,

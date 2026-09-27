@@ -32,6 +32,13 @@ Pushing to `main` triggers `.github/workflows/deploy.yml`, which SSHes to the VP
 - Owner views use `owner_panel.permissions.IsEqubOwner` and must scope every lookup by `owner=request.user` with `get_object_or_404`.
 - DRF has no default permission class here, so a view without `@permission_classes` is **public**. Only signup/login/password-reset, public catalog/FAQ, and the Chapa callback should be.
 - Lottery draws use a random `secrets` seed recorded on the round; the winner is reproducible from the seed afterwards but not predictable before.
+- Every user-uploaded file goes through `equbApp.uploads.validate_image_upload()` (type, size, real image) before saving; models use random upload paths. Never save `request.FILES[...]` directly.
+- `/media/` is served by `equbApp.media_views.serve_media`; `receipt_images/` requires the payer/owner/admin or a signed URL (`signed_media_url`). The web server must not serve `/media/receipt_images/` itself.
+- Auth tokens expire after `AUTH_TOKEN_TTL_DAYS` (`user.authentication.ExpiringTokenAuthentication`); `POST /logout/` revokes. Login/signup/reset are rate-limited (`user/throttles.py`, rates in settings).
+- Self-registration (`/signup`, `/signup/customer/`) is customer-only. `UserSerializer` has an explicit field list; never expose `password`/permissions.
+- `EqubSerializer` only includes `payout_bank_accounts` when the view passes `include_payout_accounts=True` (members/owner/admin/joining); `UserPublicSerializer` only includes `phone` with `include_member_phones=True`.
+- `notify_admins(message, notif_type, equb=...)` reaches platform admins plus that equb's owner only.
+- Run `pip-audit` / `npm audit` before releases; keep Django/DRF/Pillow current.
 
 ## Config & deploy notes
 - `DEBUG` and `ALLOWED_HOSTS` come from `.env`. `DEBUG` defaults to **False**; set `DEBUG=True` locally or Django will not serve `/media/` and `/static/` itself. `ALLOWED_HOSTS` is comma-separated and defaults to the production host plus localhost.

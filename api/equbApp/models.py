@@ -1,5 +1,6 @@
 import uuid
 from django.db import models
+from .uploads import receipt_upload_path
 from user.models import User
 from django.shortcuts import get_object_or_404
 from django.conf import settings
@@ -225,7 +226,7 @@ class Payment(models.Model):
     chapa_checkout_url = models.URLField(max_length=500, null=True, blank=True)
     paid_at = models.DateTimeField(null=True, blank=True)
     receipt_image = models.ImageField(
-        upload_to="receipt_images/", null=True, blank=True
+        upload_to=receipt_upload_path, null=True, blank=True
     )
     status = models.CharField(
         max_length=20,

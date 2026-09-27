@@ -102,9 +102,13 @@ class EqubDetailTests(APITestCase):
 
     def test_join_equb_initial_success(self):
         """Test joining an Equb at Round 0 with the first-round payment."""
+        import io
+        from PIL import Image
         from django.core.files.uploadedfile import SimpleUploadedFile
         url = reverse('join-equb-initial', kwargs={'equb_id': self.equb.id})
-        receipt = SimpleUploadedFile("receipt.jpg", b"\xff\xd8\xff\xd9", content_type="image/jpeg")
+        buf = io.BytesIO()
+        Image.new("RGB", (2, 2)).save(buf, "PNG")
+        receipt = SimpleUploadedFile("receipt.png", buf.getvalue(), content_type="image/png")
         response = self.client.post(url, {
             "accept_terms": True,
             "amount": "100.00",

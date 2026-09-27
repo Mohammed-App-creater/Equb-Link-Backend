@@ -18,6 +18,17 @@ import random
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from .permissions import IsAdminUser
+from .throttles import (
+    LoginThrottle,
+    PasswordResetConfirmThrottle,
+    PasswordResetRequestThrottle,
+    SignupThrottle,
+)
+from .authentication import issue_token
+from rest_framework.decorators import throttle_classes
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError as DjangoValidationError
+from equbApp.uploads import validate_image_upload
 from rest_framework.response import Response
 User = get_user_model()
 
@@ -26,6 +37,7 @@ User = get_user_model()
 # SIGNUP
 # =========================
 @api_view(["POST"])
+@throttle_classes([SignupThrottle])
 def signup(request):
     data = request.data
 
@@ -52,17 +64,21 @@ def signup(request):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
-    # Create user
-    if role == "customer":
-        user = User.objects.create_customer(phone, password, email)
-    elif role == "admin":
-        user = User.objects.create_admin(phone, password, email)
-    elif role == "equb_admin":
-        user = User.objects.create_equb_admin(phone, password, email)
-    else:
-        return Response({"error": "Invalid role"}, status=400)
+    # Self-registration is customer-only. Admin and owner accounts are created
+    # by a platform admin (api/admin/create/, equb-admin/create/).
+    if role != "customer":
+        return Response(
+            {"error": "Self-registration is only available for customers."},
+            status=status.HTTP_403_FORBIDDEN,
+        )
+    try:
+        validate_password(password)
+        validate_image_upload(photo)
+    except DjangoValidationError as exc:
+        return Response({"error": " ".join(exc.messages)}, status=status.HTTP_400_BAD_REQUEST)
 
-    token = Token.objects.create(user=user)
+    user = User.objects.create_customer(phone, password, email)
+    token = issue_token(user)
 
     # Create profile
     if role == "customer":
@@ -108,6 +124,7 @@ def signup(request):
 # =========================
 @api_view(["POST"])
 @permission_classes([AllowAny])
+@throttle_classes([SignupThrottle])
 def customer_signup(request):
     data = request.data
 
@@ -127,8 +144,14 @@ def customer_signup(request):
     if User.objects.filter(phone=phone).exists():
         return Response({"error": "Phone already exists"}, status=400)
 
+    try:
+        validate_password(password)
+        validate_image_upload(photo)
+    except DjangoValidationError as exc:
+        return Response({"error": " ".join(exc.messages)}, status=status.HTTP_400_BAD_REQUEST)
+
     user = User.objects.create_customer(phone, password, email)
-    token = Token.objects.create(user=user)
+    token = issue_token(user)
 
     referral_code = name[:4].upper() + str(random.randint(1000, 9999))
 
@@ -160,6 +183,15 @@ def create_admin(request):
     password = data.get("password")
     name = data.get("name")
 
+    if not all([phone, password, name]):
+        return Response({"error": "phone, password and name are required."}, status=status.HTTP_400_BAD_REQUEST)
+    if User.objects.filter(phone=phone).exists():
+        return Response({"error": "Phone number already registered"}, status=status.HTTP_400_BAD_REQUEST)
+    try:
+        validate_password(password)
+    except DjangoValidationError as exc:
+        return Response({"error": " ".join(exc.messages)}, status=status.HTTP_400_BAD_REQUEST)
+
     user = User.objects.create_admin(phone, password)
 
     admin = Admin.objects.create(
@@ -185,6 +217,15 @@ def create_equb_admin(request):
     password = data.get("password")
     name = data.get("name")
 
+    if not all([phone, password, name]):
+        return Response({"error": "phone, password and name are required."}, status=status.HTTP_400_BAD_REQUEST)
+    if User.objects.filter(phone=phone).exists():
+        return Response({"error": "Phone number already registered"}, status=status.HTTP_400_BAD_REQUEST)
+    try:
+        validate_password(password)
+    except DjangoValidationError as exc:
+        return Response({"error": " ".join(exc.messages)}, status=status.HTTP_400_BAD_REQUEST)
+
     user = User.objects.create_equb_admin(phone, password)
 
     equb_admin = EqubAdmin.objects.create(
@@ -203,6 +244,7 @@ def create_equb_admin(request):
 # LOGIN (PHONE BASED) 
 # =========================
 @api_view(["POST"])
+@throttle_classes([LoginThrottle])
 def login(request):
     phone = request.data.get("phone")
     password = request.data.get("password")
@@ -215,20 +257,14 @@ def login(request):
 
     user = User.objects.filter(phone=phone).first()
 
-    if not user:
+    # Same message and status whether the phone exists or not (no enumeration).
+    if not user or not user.check_password(password) or not user.is_active:
         return Response(
-            {"error": "Phone number not registered"},
-            status=status.HTTP_404_NOT_FOUND,
-        )
-
-    if not user.check_password(password):
-        return Response(
-            {"error": "Invalid credentials"},
+            {"error": "Invalid phone number or password."},
             status=status.HTTP_400_BAD_REQUEST,
         )
 
-    Token.objects.filter(user=user).delete()
-    token = Token.objects.create(user=user)
+    token = issue_token(user)
 
     if user.is_customer:
         serializer = CustomerDataSerializer(Customer.objects.get(user=user))
@@ -252,6 +288,7 @@ def login(request):
 # LOGIN (PHONE BASED) with token
 # =========================
 @api_view(["POST"])
+@throttle_classes([LoginThrottle])
 def loginWithToken(request):
     phone = request.data.get("phone")
     password = request.data.get("password")
@@ -264,20 +301,14 @@ def loginWithToken(request):
 
     user = User.objects.filter(phone=phone).first()
 
-    if not user:
+    # Same message and status whether the phone exists or not (no enumeration).
+    if not user or not user.check_password(password) or not user.is_active:
         return Response(
-            {"error": "Phone number not registered"},
-            status=status.HTTP_404_NOT_FOUND,
-        )
-
-    if not user.check_password(password):
-        return Response(
-            {"error": "Invalid credentials"},
+            {"error": "Invalid phone number or password."},
             status=status.HTTP_400_BAD_REQUEST,
         )
 
-    Token.objects.filter(user=user).delete()
-    token = Token.objects.create(user=user)
+    token = issue_token(user)
 
     if user.is_customer:
         serializer = CustomerDataSerializer(Customer.objects.get(user=user))
@@ -386,6 +417,16 @@ def me(request):
     )
 
 
+# =========================== Logout ===========================
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def logout(request):
+    """Revokes the caller's token server-side. Clients discard it locally too."""
+    if request.auth is not None:
+        request.auth.delete()
+    return Response({"detail": "Logged out."})
+
+
 # =========================== Owner panel profile ===========================
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
@@ -476,6 +517,7 @@ def _hash_reset_code(code):
 @api_view(["POST"])
 @authentication_classes([])
 @permission_classes([AllowAny])
+@throttle_classes([PasswordResetRequestThrottle])
 def password_reset_request(request):
     """
     Body: {"phone": "..."}. Sends a 6-digit code by SMS. The response is the
@@ -485,6 +527,13 @@ def password_reset_request(request):
     phone = request.data.get("phone")
     if not phone:
         return Response({"error": "phone is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+    if not settings.DEBUG and settings.SMS_PROVIDER == "console":
+        # No real SMS provider configured: never print codes to production logs.
+        return Response(
+            {"error": "Password reset by SMS is not available yet. Please contact support."},
+            status=status.HTTP_503_SERVICE_UNAVAILABLE,
+        )
 
     user = _find_user_by_phone(phone)
     if user is None:
@@ -511,11 +560,12 @@ def password_reset_request(request):
             user.phone,
             f"Your Equb Link password reset code is {code}. It expires in {ttl} minutes.",
         )
-    except SmsDeliveryError:
-        return Response(
-            {"error": "We could not send the SMS right now. Please try again later."},
-            status=status.HTTP_502_BAD_GATEWAY,
-        )
+    except SmsDeliveryError as exc:
+        # Same generic reply as for unknown numbers, so an SMS outage cannot be
+        # used to tell which phones have accounts. The failure is logged.
+        import logging
+        logging.getLogger(__name__).warning("Password reset SMS failed for user %s: %s", user.pk, exc)
+        return Response(RESET_GENERIC_RESPONSE)
 
     payload = dict(RESET_GENERIC_RESPONSE)
     if settings.DEBUG and settings.SMS_PROVIDER == "console":
@@ -527,6 +577,7 @@ def password_reset_request(request):
 @api_view(["POST"])
 @authentication_classes([])
 @permission_classes([AllowAny])
+@throttle_classes([PasswordResetConfirmThrottle])
 def password_reset_confirm(request):
     """
     Body: {"phone", "code", "new_password", "confirm_password"}.
@@ -545,11 +596,10 @@ def password_reset_confirm(request):
         )
     if new_password != confirm_password:
         return Response({"error": "Passwords do not match."}, status=status.HTTP_400_BAD_REQUEST)
-    if len(new_password) < 8:
-        return Response(
-            {"error": "Password must be at least 8 characters."},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
+    try:
+        validate_password(new_password)
+    except DjangoValidationError as exc:
+        return Response({"error": " ".join(exc.messages)}, status=status.HTTP_400_BAD_REQUEST)
 
     invalid = Response(
         {"error": "Invalid or expired code. Please request a new one."},

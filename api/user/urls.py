@@ -5,6 +5,8 @@ urlpatterns = [
     path("signup", signup, name="signup"),
     path("login", login, name="login"),
     path("me/", me, name="me"),
+    path("logout/", logout, name="logout"),
+    path("api/owner/logout/", logout, name="owner-logout"),
     path("api/owner/login", loginWithToken, name="login_with_token"),
     path("api/owner/profile/", owner_profile, name="owner-profile"),
     path("signup/customer/", customer_signup),

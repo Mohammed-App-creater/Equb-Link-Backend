@@ -2,7 +2,8 @@
 from django.contrib import admin
 from django.conf import settings
 from django.conf.urls.static import static
-from django.urls import path, include
+from django.urls import path, include, re_path
+from equbApp.media_views import serve_media
 from drf_spectacular.views import (
     SpectacularAPIView,
     SpectacularRedocView,
@@ -50,5 +51,7 @@ urlpatterns = [
 ]
 
 urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
-urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+# Media goes through Django so receipts can be access-controlled
+# (see equbApp/media_views.py). The web server must not serve /media/receipt_images/ directly.
+urlpatterns += [re_path(r"^media/(?P<path>.*)$", serve_media, name="media")]
 

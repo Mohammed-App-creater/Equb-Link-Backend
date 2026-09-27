@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from equbApp.media_views import signed_media_url
 from equbApp.models import (
     Equb,
     EqubMember,
@@ -202,6 +203,11 @@ class OwnerPaymentSerializer(serializers.ModelSerializer):
             "approved_by",
             "approved_at"
         ]
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data["receipt_image"] = signed_media_url(self.context.get("request"), instance.receipt_image)
+        return data
 
 class OwnerRoundSerializer(serializers.ModelSerializer):
     id = serializers.UUIDField(read_only=True)
