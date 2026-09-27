@@ -3,6 +3,7 @@
 # =========================
 import hashlib
 import random
+import secrets
 import uuid
 
 # =========================
@@ -44,7 +45,7 @@ class OwnerEqubListCreateView(generics.ListCreateAPIView):
     def get_queryset(self):
         return Equb.objects.filter(owner=self.request.user).prefetch_related(
             "payout_bank_accounts",
-        )
+        ).order_by("-created_at")
 
     def perform_create(self, serializer):
         serializer.save(owner=self.request.user)
@@ -146,12 +147,12 @@ class OwnerMemberListView(generics.ListAPIView):
 
     def get_queryset(self):
 
-        equb = Equb.objects.get(
+        equb = get_object_or_404(Equb, 
             id=self.kwargs["equb_id"],
             owner=self.request.user
         )
 
-        return equb.members.all()
+        return equb.members.all().order_by("-joined_at")
 
 class OwnerMemberApproveView(APIView):
 
@@ -159,7 +160,7 @@ class OwnerMemberApproveView(APIView):
 
     def post(self, request, equb_id, member_id):
 
-        member = EqubMember.objects.get(
+        member = get_object_or_404(EqubMember, 
             id=member_id,
             equb__id=equb_id,
             equb__owner=request.user
@@ -183,7 +184,7 @@ class OwnerMemberRejectView(APIView):
 
     def post(self, request, equb_id, member_id):
 
-        member = EqubMember.objects.get(
+        member = get_object_or_404(EqubMember, 
             id=member_id,
             equb__id=equb_id,
             equb__owner=request.user
@@ -208,14 +209,14 @@ class OwnerPaymentListView(generics.ListAPIView):
 
     def get_queryset(self):
 
-        equb = Equb.objects.get(
+        equb = get_object_or_404(Equb, 
             id=self.kwargs["equb_id"],
             owner=self.request.user
         )
 
         qs = Payment.objects.filter(
             equb_member__equb=equb
-        )
+        ).order_by("-created_at")
 
         status_param = self.request.GET.get("status")
         if status_param:
@@ -229,7 +230,7 @@ class OwnerPaymentApproveView(APIView):
 
     def post(self, request, equb_id, payment_id):
 
-        payment = Payment.objects.get(
+        payment = get_object_or_404(Payment, 
             id=payment_id,
             equb_member__equb__id=equb_id,
             equb_member__equb__owner=request.user
@@ -255,7 +256,7 @@ class OwnerPaymentRejectView(APIView):
 
     def post(self, request, equb_id, payment_id):
 
-        payment = Payment.objects.get(
+        payment = get_object_or_404(Payment, 
             id=payment_id,
             equb_member__equb__id=equb_id,
             equb_member__equb__owner=request.user
@@ -338,7 +339,7 @@ class OwnerDrawView(APIView):
 
     def post(self, request, equb_id, round):
 
-        equb = Equb.objects.get(
+        equb = get_object_or_404(Equb, 
             id=equb_id,
             owner=request.user,
             status="active"
@@ -385,13 +386,11 @@ class OwnerDrawView(APIView):
                 status=400
             )
 
-        seed = hashlib.sha256(
-            f"{equb.id}{round}".encode()
-        ).hexdigest()
-
-        random.seed(seed)
-
-        winner = random.choice(pool)
+        # Unpredictable before the draw (random seed), reproducible after it
+        # from the recorded seed; the pool is sorted so the order is stable.
+        seed = secrets.token_hex(16)
+        pool.sort(key=lambda m: str(m.id))
+        winner = random.Random(seed).choice(pool)
 
         round_obj, _ = LotteryRound.objects.get_or_create(
             equb=equb,
@@ -435,7 +434,7 @@ class OwnerPayoutView(APIView):
 
     def post(self, request, equb_id, round):
 
-        round_obj = LotteryRound.objects.get(
+        round_obj = get_object_or_404(LotteryRound, 
             equb__id=equb_id,
             equb__owner=request.user,
             round=round

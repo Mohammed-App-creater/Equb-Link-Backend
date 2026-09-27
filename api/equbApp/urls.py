@@ -5,77 +5,77 @@ from . import views
 urlpatterns = [
     # ----------------- EqubType -----------------
     path(
-        "admin/equb-types/",
+        "api/admin/equb-types/",
         views.equb_type_list_create_admin,
         name="equb-type-list-create",
     ),
     path(
-        "admin/equb-types/<uuid:id>/",
+        "api/admin/equb-types/<uuid:id>/",
         views.equb_type_detail_admin,
         name="equb-type-detail",
     ),
     # ----------------- EqubCategory -----------------
     path(
-        "admin/equb-categories/",
+        "api/admin/equb-categories/",
         views.equb_category_list_create_admin,
         name="equb-category-list-create",
     ),
     path(
-        "admin/equb-categories/<uuid:id>/",
+        "api/admin/equb-categories/<uuid:id>/",
         views.equb_category_detail_admin,
         name="equb-category-detail",
     ),
     # ----------------- Equb -----------------
-    path("admin/equbs/", views.equb_list_create_admin, name="equb-list-create"),
-    path("admin/equbs/<uuid:id>/", views.equb_detail_admin, name="equb-detail"),
+    path("api/admin/equbs/", views.equb_list_create_admin, name="equb-list-create"),
+    path("api/admin/equbs/<uuid:id>/", views.equb_detail_admin, name="admin-equb-detail"),
     # ----------------- EqubMember -----------------
     path(
-        "admin/equb-members/",
+        "api/admin/equb-members/",
         views.equb_member_list_create_admin,
         name="equb-member-list-create",
     ),
     path(
-        "admin/equb-members/<uuid:id>/",
+        "api/admin/equb-members/<uuid:id>/",
         views.equb_member_detail_admin,
         name="equb-member-detail",
     ),
     # ----------------- Payment -----------------
     path(
-        "admin/payments/", views.payment_list_create_admin, name="payment-list-create"
+        "api/admin/payments/", views.payment_list_create_admin, name="payment-list-create"
     ),
     path(
-        "admin/payments/<uuid:id>/", views.payment_detail_admin, name="payment-detail"
+        "api/admin/payments/<uuid:id>/", views.payment_detail_admin, name="payment-detail"
     ),
     # ----------------- LotteryWinner -----------------
     path(
-        "admin/lottery-winners/",
+        "api/admin/lottery-winners/",
         views.lottery_winner_list_create_admin,
         name="lottery-winner-list-create",
     ),
     path(
-        "admin/lottery-winners/<uuid:id>/",
+        "api/admin/lottery-winners/<uuid:id>/",
         views.lottery_winner_detail_admin,
         name="lottery-winner-detail",
     ),
     # ----------------- Notification -----------------
     path(
-        "admin/notifications/",
+        "api/admin/notifications/",
         views.notification_list_create_admin,
         name="notification-list-create",
     ),
     path(
-        "admin/notifications/<uuid:id>/",
+        "api/admin/notifications/<uuid:id>/",
         views.notification_detail_admin,
         name="notification-detail",
     ),
     # ----------------- SupportTicket -----------------
     path(
-        "admin/support-tickets/",
+        "api/admin/support-tickets/",
         views.support_ticket_list_create_admin,
         name="support-ticket-list-create",
     ),
     path(
-        "admin/support-tickets/<uuid:id>/",
+        "api/admin/support-tickets/<uuid:id>/",
         views.support_ticket_detail_admin,
         name="support-ticket-detail",
     ),
@@ -100,7 +100,7 @@ urlpatterns = [
    path(
         "all_equb_by_category_id/<uuid:category_id>/",
         views.get_active_equbs_by_category_id,
-        name="active-equbs-by-type",
+        name="active-equbs-by-category",
     ),
    
     # List all active Equbs by EqubType ID
@@ -178,7 +178,7 @@ urlpatterns = [
 
     # Admin Approve Payment
     path(
-        "admin/payments/<uuid:payment_id>/approve/",
+        "api/admin/payments/<uuid:payment_id>/approve/",
         views.admin_approve_payment,
         name="admin-approve-payment"
     ),
@@ -195,11 +195,11 @@ urlpatterns = [
     # ----------------- Notifications (Customer) -----------------
     path("notifications/", views.customer_notifications, name="customer-notifications"),
     
-    path("api/owner/notifications/", views.customer_notifications, name="customer-notifications"),
+    path("api/owner/notifications/", views.customer_notifications, name="owner-customer-notifications"),
     
     path("notifications/read/", views.mark_notification_as_read, name="mark-notifications-read"),
     
-    path("api/owner/notifications/read/", views.mark_notification_as_read, name="mark-notifications-read"),
+    path("api/owner/notifications/read/", views.mark_notification_as_read, name="owner-mark-notifications-read"),
     
     
     # ----------------- Chapa Pament -----------------

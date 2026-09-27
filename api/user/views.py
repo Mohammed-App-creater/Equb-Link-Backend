@@ -16,7 +16,8 @@ from .serializers import (
 )
 import random
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from .permissions import IsAdminUser
 from rest_framework.response import Response
 User = get_user_model()
 
@@ -108,7 +109,6 @@ def signup(request):
 @api_view(["POST"])
 @permission_classes([AllowAny])
 def customer_signup(request):
-    print("SIGNUP DATA:", request.data)
     data = request.data
 
     phone = data.get("phone")
@@ -306,7 +306,6 @@ class UpdateProfileView(APIView):
     permission_classes = [IsAuthenticated]
 
     def put(self, request):
-        print("PROFILE DATA:", request.data)
         serializer = ProfileUpdateSerializer(
             instance=request.user,
             data=request.data,
@@ -360,19 +359,22 @@ class ChangePasswordView(APIView):
 def me(request):
     user = request.user
 
+    # Fall back to the bare account when the profile row is missing
+    # (e.g. accounts created from the shell) instead of a 500.
+    serializer = None
     if user.is_customer:
-        serializer = CustomerDataSerializer(
-            Customer.objects.get(user=user)
-        )
+        profile = Customer.objects.filter(user=user).first()
+        if profile:
+            serializer = CustomerDataSerializer(profile)
     elif user.is_admin:
-        serializer = AdminSerializer(
-            Admin.objects.get(user=user)
-        )
+        profile = Admin.objects.filter(user=user).first()
+        if profile:
+            serializer = AdminSerializer(profile)
     elif user.is_equb_admin:
-        serializer = EqubAdminDataSerializer(
-            EqubAdmin.objects.get(user=user)
-        )
-    else:
+        profile = EqubAdmin.objects.filter(user=user).first()
+        if profile:
+            serializer = EqubAdminDataSerializer(profile)
+    if serializer is None:
         serializer = UserSerializer(user)
 
     return Response(

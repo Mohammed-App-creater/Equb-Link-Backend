@@ -93,9 +93,23 @@ class EqubDetailTests(APITestCase):
         url = reverse('admin-approve-payment', kwargs={'payment_id': '00000000-0000-0000-0000-000000000000'})
         self.assertTrue(url)
 
-    def test_join_equb_initial_success(self):
-        """Test joining an Equb at Round 0 successfully."""
+    def test_join_equb_initial_requires_payment(self):
+        """Accepting terms alone is not enough: first-round payment is required."""
         url = reverse('join-equb-initial', kwargs={'equb_id': self.equb.id})
         response = self.client.post(url, {"accept_terms": True})
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_join_equb_initial_success(self):
+        """Test joining an Equb at Round 0 with the first-round payment."""
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        url = reverse('join-equb-initial', kwargs={'equb_id': self.equb.id})
+        receipt = SimpleUploadedFile("receipt.jpg", b"\xff\xd8\xff\xd9", content_type="image/jpeg")
+        response = self.client.post(url, {
+            "accept_terms": True,
+            "amount": "100.00",
+            "payment_method": "bank",
+            "transaction_id": "TXN-TEST-1",
+            "receipt_image": receipt,
+        }, format="multipart")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED, response.data)
         self.assertEqual(response.data['member_status'], "pending")

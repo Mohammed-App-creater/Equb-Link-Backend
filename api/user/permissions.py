@@ -3,14 +3,19 @@ from rest_framework.permissions import BasePermission
 
 class IsAdminUser(BasePermission):
     """
-    Allows access only to admin users.
+    Platform admins only (is_admin or superuser).
+
+    Deliberately NOT DRF's IsAdminUser: that one checks `is_staff`, and equb
+    owners are created with is_staff=True for the Django admin site, which
+    would let every owner into the platform-admin API.
     """
     def has_permission(self, request, view):
-        is_adminuser = request.user and request.user.is_admin
-        if not is_adminuser and request.user:
-            # Your ban logic goes here
-            pass
-        return is_adminuser
+        user = request.user
+        return bool(
+            user
+            and user.is_authenticated
+            and (user.is_admin or user.is_superuser)
+        )
 
 
 class IsCustomerUser(BasePermission):

@@ -8,7 +8,8 @@ from django.urls import reverse
 import requests
 from django.shortcuts import render
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated, IsAdminUser
+from rest_framework.permissions import IsAuthenticated
+from user.permissions import IsAdminUser
 from rest_framework.response import Response
 from rest_framework import status
 from django.conf import settings
@@ -877,6 +878,7 @@ def approve_payment(request, payment_id):
 
 
 @api_view(['GET'])
+@permission_classes([IsAuthenticated, IsAdminUser])
 def list_pending_payments(request):
     pending_payments = Payment.objects.filter(status="pending")
     serializer = PaymentSerializer(pending_payments, many=True)
@@ -1470,33 +1472,53 @@ def initialize_chapa_payment(request):
         "tx_ref": tx_ref
     })
     
-@api_view(["GET"])
-def verify_chapa_payment(request, tx_ref):
-    payment = Payment.objects.get(transaction_id=tx_ref)
-
-    headers = {
-        "Authorization": f"Bearer {settings.CHAPA_SECRET_KEY}"
-    }
-
-    response = requests.get(
-        f"https://api.chapa.co/v1/transaction/verify/{tx_ref}",
-        headers=headers,
-        timeout=10  # seconds
-    )
-
-    data = response.json()
-
-    if data["status"] == "success":
+def _apply_chapa_verification(payment, data):
+    """
+    Shared by the callback and the mobile poll. Completes the payment only
+    when Chapa reports success; an explicit failure/cancellation rejects it;
+    a checkout that is still in progress stays pending (it used to be
+    rejected on the first poll).
+    """
+    tx_status = str((data.get("data") or {}).get("status") or "").lower()
+    if data.get("status") == "success" and tx_status in ("", "success", "completed"):
         payment.status = "completed"
         payment.paid_at = timezone.now()
         payment.save()
-
         return Response({"status": "completed"})
 
-    payment.status = "rejected"
-    payment.save()
+    if tx_status in ("failed", "cancelled", "canceled", "expired", "reversed"):
+        payment.status = "rejected"
+        payment.save()
+        return Response({"status": "failed"})
 
-    return Response({"status": "failed"})
+    return Response({"status": "pending"})
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def verify_chapa_payment(request, tx_ref):
+    """Polled by the app after checkout. Only the payer can verify their own payment."""
+    payment = get_object_or_404(
+        Payment, transaction_id=tx_ref, equb_member__user=request.user
+    )
+    if payment.status == "completed":
+        return Response({"status": "completed"})
+
+    headers = {"Authorization": f"Bearer {settings.CHAPA_SECRET_KEY}"}
+    try:
+        response = requests.get(
+            f"https://api.chapa.co/v1/transaction/verify/{tx_ref}",
+            headers=headers,
+            timeout=10,
+        )
+        data = response.json()
+    except (requests.RequestException, ValueError):
+        return Response(
+            {"status": payment.status, "error": "Chapa verification failed"},
+            status=status.HTTP_502_BAD_GATEWAY,
+        )
+
+    return _apply_chapa_verification(payment, data)
 
 
 # ===========================
@@ -1687,19 +1709,12 @@ def chapa_callback(request):
     except requests.RequestException:
         return Response({"error": "Chapa verification failed"}, status=502)
 
-    data = response.json()
+    try:
+        data = response.json()
+    except ValueError:
+        return Response({"error": "Chapa verification failed"}, status=502)
 
-    if data.get("status") == "success":
-        payment.status = "completed"
-        payment.paid_at = timezone.now()
-        payment.save()
-
-        return Response({"status": "completed"})
-
-    payment.status = "rejected"
-    payment.save()
-
-    return Response({"status": "failed"})
+    return _apply_chapa_verification(payment, data)
 
 
 # =========================== Customer notifications (bulk / pin) ===========================

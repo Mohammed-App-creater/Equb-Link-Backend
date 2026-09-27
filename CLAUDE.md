@@ -20,11 +20,18 @@ Django 5.2, DRF 3.16, drf-spectacular, django-cors-headers, django-filter, djang
 - Activate venv: `myenv\Scripts\activate`
 - Run: `python manage.py runserver`
 - Migrations: `python manage.py makemigrations && python manage.py migrate`. Create them locally and commit them.
-- Tests: `python manage.py test`
+- Tests: `python manage.py test equbApp user owner_panel advert` — the app labels are required. Plain `manage.py test` finds 0 tests because `api/` is not a package, so discovery never descends into it.
 - API docs: http://localhost:8000/api/schema/docs/ (Swagger) and `/api/schema/redoc/`
 
 ## Deploy
 Pushing to `main` triggers `.github/workflows/deploy.yml`, which SSHes to the VPS and runs `/root/equb/deploy.sh` (see `.scripts/deploy.sh`): git pull, pip install, collectstatic, migrate, then restart gunicorn and nginx. Production API: `https://api.equb.equblinktrading.com/`.
+
+## Permissions & routing rules
+- Platform-admin API lives under **`api/admin/...`** (not `admin/...`: the Django admin site is mounted at `/admin/` and its catch-all swallows anything below it).
+- Use `user.permissions.IsAdminUser` (checks `is_admin`/superuser) for platform-admin views, never DRF's `IsAdminUser` (checks `is_staff`, which equb owners also have for the Django admin site).
+- Owner views use `owner_panel.permissions.IsEqubOwner` and must scope every lookup by `owner=request.user` with `get_object_or_404`.
+- DRF has no default permission class here, so a view without `@permission_classes` is **public**. Only signup/login/password-reset, public catalog/FAQ, and the Chapa callback should be.
+- Lottery draws use a random `secrets` seed recorded on the round; the winner is reproducible from the seed afterwards but not predictable before.
 
 ## Config & deploy notes
 - `DEBUG` and `ALLOWED_HOSTS` come from `.env`. `DEBUG` defaults to **False**; set `DEBUG=True` locally or Django will not serve `/media/` and `/static/` itself. `ALLOWED_HOSTS` is comma-separated and defaults to the production host plus localhost.

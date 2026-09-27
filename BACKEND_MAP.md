@@ -150,7 +150,7 @@ The largest app. Owns the equb lifecycle, members, payments, lottery winners, no
 - `NotificationSerializer`, `SupportTicketSerializer`.
 - `JoinEqubSerializer` — validates accept-terms join with full back-payment.
 
-**Views** ([api/equbApp/views.py](api/equbApp/views.py)) — virtually all FBVs. Two route families: `admin/*` (system-admin CRUD) and customer/mobile flows. Includes a local `notify_admins` helper that bulk-creates notifications for all admin/equb-admin users.
+**Views** ([api/equbApp/views.py](api/equbApp/views.py)) — virtually all FBVs. Two route families: `api/admin/*` (system-admin CRUD; moved from `admin/*`, which the Django admin site shadowed) and customer/mobile flows. Includes a local `notify_admins` helper that bulk-creates notifications for all admin/equb-admin users.
 
 System-admin CRUD pairs (each is `list_create` + `detail` GET/PUT/DELETE, `IsAdminUser`):
 - `equb_type_list_create_admin` / `equb_type_detail_admin`
@@ -247,7 +247,7 @@ Owner-facing CRUD/operations layer, gated by the custom `IsEqubOwner` permission
 | POST | `/api/owner/login` | `loginWithToken` | Login → `token` (owner/mobile client) |
 | GET  | `/me/` | `me` | Current user profile by role |
 | POST | `/signup/customer/` | `customer_signup` | Customer-only signup w/ referral code |
-| POST | `/admin/create/` | `create_admin` | Superadmin creates admin |
+| POST | `/api/admin/create/` | `create_admin` | Superadmin creates admin |
 | POST | `/equb-admin/create/` | `create_equb_admin` | Superadmin creates equb admin |
 | PUT  | `/profile/update/` | `UpdateProfileView` | Update email + photo |
 | POST | `/profile/change-password/` | `ChangePasswordView` | Change password |
@@ -257,23 +257,23 @@ Owner-facing CRUD/operations layer, gated by the custom `IsEqubOwner` permission
 | GET/POST | `/admin_faqs/` | `faq_list_create_admin` | FAQ admin list/create |
 | GET/PUT/DELETE | `/admin_faqs/<int:id>/` | `faq_detail_admin` | FAQ admin detail |
 | GET | `/faqs/` | `faq_list` | Public active FAQs |
-| GET/POST | `/admin/equb-types/` | `equb_type_list_create_admin` | EqubType admin |
-| GET/PUT/DELETE | `/admin/equb-types/<uuid:id>/` | `equb_type_detail_admin` | EqubType detail |
-| GET/POST | `/admin/equb-categories/` | `equb_category_list_create_admin` | EqubCategory admin |
-| GET/PUT/DELETE | `/admin/equb-categories/<uuid:id>/` | `equb_category_detail_admin` | EqubCategory detail |
-| GET/POST | `/admin/equbs/` | `equb_list_create_admin` | Equb admin list/create |
-| GET/PUT/DELETE | `/admin/equbs/<uuid:id>/` | `equb_detail_admin` | Equb admin detail |
-| GET/POST | `/admin/equb-members/` | `equb_member_list_create_admin` | EqubMember admin (filters: equb, user) |
-| GET/PUT/DELETE | `/admin/equb-members/<uuid:id>/` | `equb_member_detail_admin` | EqubMember detail |
-| GET/POST | `/admin/payments/` | `payment_list_create_admin` | Payment admin |
-| GET/PUT/DELETE | `/admin/payments/<uuid:id>/` | `payment_detail_admin` | Payment detail |
-| POST | `/admin/payments/<uuid:payment_id>/approve/` | `admin_approve_payment` | Approve/reject payment |
-| GET/POST | `/admin/lottery-winners/` | `lottery_winner_list_create_admin` | LotteryWinner admin |
-| GET/PUT/DELETE | `/admin/lottery-winners/<uuid:id>/` | `lottery_winner_detail_admin` | LotteryWinner detail |
-| GET/POST | `/admin/notifications/` | `notification_list_create_admin` | Notification admin |
-| GET/PUT/DELETE | `/admin/notifications/<uuid:id>/` | `notification_detail_admin` | Notification detail |
-| GET/POST | `/admin/support-tickets/` | `support_ticket_list_create_admin` | SupportTicket admin |
-| GET/PUT/DELETE | `/admin/support-tickets/<uuid:id>/` | `support_ticket_detail_admin` | SupportTicket detail |
+| GET/POST | `/api/admin/equb-types/` | `equb_type_list_create_admin` | EqubType admin |
+| GET/PUT/DELETE | `/api/admin/equb-types/<uuid:id>/` | `equb_type_detail_admin` | EqubType detail |
+| GET/POST | `/api/admin/equb-categories/` | `equb_category_list_create_admin` | EqubCategory admin |
+| GET/PUT/DELETE | `/api/admin/equb-categories/<uuid:id>/` | `equb_category_detail_admin` | EqubCategory detail |
+| GET/POST | `/api/admin/equbs/` | `equb_list_create_admin` | Equb admin list/create |
+| GET/PUT/DELETE | `/api/admin/equbs/<uuid:id>/` | `equb_detail_admin` | Equb admin detail |
+| GET/POST | `/api/admin/equb-members/` | `equb_member_list_create_admin` | EqubMember admin (filters: equb, user) |
+| GET/PUT/DELETE | `/api/admin/equb-members/<uuid:id>/` | `equb_member_detail_admin` | EqubMember detail |
+| GET/POST | `/api/admin/payments/` | `payment_list_create_admin` | Payment admin |
+| GET/PUT/DELETE | `/api/admin/payments/<uuid:id>/` | `payment_detail_admin` | Payment detail |
+| POST | `/api/admin/payments/<uuid:payment_id>/approve/` | `admin_approve_payment` | Approve/reject payment |
+| GET/POST | `/api/admin/lottery-winners/` | `lottery_winner_list_create_admin` | LotteryWinner admin |
+| GET/PUT/DELETE | `/api/admin/lottery-winners/<uuid:id>/` | `lottery_winner_detail_admin` | LotteryWinner detail |
+| GET/POST | `/api/admin/notifications/` | `notification_list_create_admin` | Notification admin |
+| GET/PUT/DELETE | `/api/admin/notifications/<uuid:id>/` | `notification_detail_admin` | Notification detail |
+| GET/POST | `/api/admin/support-tickets/` | `support_ticket_list_create_admin` | SupportTicket admin |
+| GET/PUT/DELETE | `/api/admin/support-tickets/<uuid:id>/` | `support_ticket_detail_admin` | SupportTicket detail |
 | GET | `/mobile_equb_categories/` | `equb_categories_with_count` | Categories + active count |
 | GET | `/mobile_equbs_by_category/` | `get_active_equbs_by_category` | All categories + active equbs |
 | GET | `/all_equb_by_category_id/<uuid:category_id>/` | `get_active_equbs_by_category_id` | Active equbs for category |
