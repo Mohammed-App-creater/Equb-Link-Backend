@@ -9,10 +9,6 @@ from drf_spectacular.views import (
     SpectacularSwaggerView,
 )
 
-from wagtail.admin import urls as wagtailadmin_urls
-from wagtail.documents import urls as wagtaildocs_urls
-from wagtail import urls as wagtail_urls
-
 from owner_panel.views import EthiopianBankListView
 
 urlpatterns = [
@@ -45,10 +41,6 @@ urlpatterns = [
         SpectacularRedocView.as_view(url_name="schema"),
         name="redoc",
     ),
-    # path('cms/', include(wagtailadmin_urls)),        # CMS admin
-    # path('documents/', include(wagtaildocs_urls)),   # Document serving
-    # # your other app URLs
-    # path('', include(wagtail_urls)), 
 ]
 
 urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

@@ -1,5 +1,6 @@
+myenv/
 media/
-**/migrations/
+**/migrations/__pycache__/
 # Django #
 *.log
 *.pot

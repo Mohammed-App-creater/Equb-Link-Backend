@@ -23,4 +23,4 @@ jobs:
 
       - name: Deploy to VPS using script
         run: |
-          ssh -i ~/.ssh/id_rsa ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} "bash /root/equb/deploy.sh"
+          ssh -i ~/.ssh/id_rsa ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} "cd /root/equb && git pull origin main && bash .scripts/deploy.sh"
