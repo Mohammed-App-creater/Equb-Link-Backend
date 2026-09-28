@@ -223,8 +223,9 @@ SPECTACULAR_SETTINGS = {
     "DESCRIPTION": "Equb App project api",
     "VERSION": "1.0.0",
     "SERVE_INCLUDE_SCHEMA": False,
-    # API docs only for platform admins (log into /admin/ first, or send a token)
-    "SERVE_PERMISSIONS": ["user.permissions.IsAdminUser"],
+    # API docs: open while developing, platform admins only in production
+    # (log into /admin/ first, or send a token)
+    "SERVE_PERMISSIONS": [] if DEBUG else ["user.permissions.IsAdminUser"],
     "SERVE_AUTHENTICATION": [
         "rest_framework.authentication.SessionAuthentication",
         "user.authentication.ExpiringTokenAuthentication",
