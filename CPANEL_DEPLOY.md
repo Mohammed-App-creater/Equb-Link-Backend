@@ -56,10 +56,18 @@ python manage.py seed_demo --password '<strong password>'   # first deploy only
 | Customer, Sara Tesfaye (no equb, for testing joining) | `922345678` | Mobile app |
 
 The command also creates:
-- the "Monthly 10K" equb: ETB 1,000 per round, 10 members, in the Merchants category
+- 29 member accounts, `+251911001001` to `+251911001029`, with the same password
+- 6 categories, each with an image
 - the five frequencies (Daily to Yearly)
-- a CBE payout account
-- FAQs
+- CBE, Telebirr and Awash payout accounts
+- 7 equbs:
+  - **Monthly 10K**: ETB 1,000 x 10, full. Rounds 1 and 2 are drawn, and round 3 is in progress with 2 payments waiting for approval.
+  - **Quarterly Business Equb**: round 2 is fully paid, so the owner can run a draw.
+  - **Daily Drivers 500**, **Weekly Office Savings**, **Student Weekly 200**, **Yearly Family Equb**: open for joining. Two of them have a pending join request.
+  - **Merchants Daily 1K**: a draft.
+- winners with draw seeds and payouts
+- notifications, support tickets, adverts and testimonials
+- FAQs and audit-log entries
 - app-config 1.2.0
 
 You can run it again safely. Add `--reset-passwords` to change the password on accounts that already exist.
