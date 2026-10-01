@@ -43,8 +43,26 @@ At the top of the app page, cPanel shows a command like `source /home/<user>/vir
 pip install -r requirements.txt
 python manage.py migrate
 python manage.py collectstatic --noinput
-python manage.py createsuperuser   # first deploy only
+python manage.py seed_demo --password '<strong password>'   # first deploy only
 ```
+
+`seed_demo` creates the accounts and data used in the submission documents. Every demo account uses the password you pass.
+
+| Role | Phone to type | Where |
+|---|---|---|
+| Platform admin | `0911000000` | `/admin/` and the admin panel |
+| Equb owner | `0911223344` | Admin panel |
+| Customer, Abebe Kebede (member of "Monthly 10K") | `911234567` | Mobile app |
+| Customer, Sara Tesfaye (no equb, for testing joining) | `922345678` | Mobile app |
+
+The command also creates:
+- the "Monthly 10K" equb: ETB 1,000 per round, 10 members, in the Merchants category
+- the five frequencies (Daily to Yearly)
+- a CBE payout account
+- FAQs
+- app-config 1.2.0
+
+You can run it again safely. Add `--reset-passwords` to change the password on accounts that already exist.
 
 ## 5. Restart
 Click **Restart** on the app page, or run `touch tmp/restart.txt` in the app root.
